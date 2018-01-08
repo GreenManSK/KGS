@@ -25,6 +25,10 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+/**
+ * Parser for Word .doc files
+ * @author Lukáš Kurčík
+ */
 public class DocParser extends AbstractParser {
     private final static Logger logger = Logger.getLogger(DocParser.class.getName());
 
