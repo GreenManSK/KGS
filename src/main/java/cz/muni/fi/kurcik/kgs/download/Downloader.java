@@ -15,6 +15,7 @@ public interface Downloader {
     String ORIGINAL_FILES_DIR = "original";
     String PARSED_FILES_DIR = "parsed";
     String PARSED_EXTENSION = ".txt";
+    String LINKS_EXTENSION = ".links";
 
 
     /**
@@ -23,6 +24,7 @@ public interface Downloader {
      * Downloads only files till specified depth, url is depth 0.
      *
      * Each file have its original content saved into original/ID.extension and parsed content as parsed/ID.txt, where ID is assigned by Downloader.
+     * URLs linked from site are put into ID.links file, each URL on separate line.
      * ID and URL pairs are saved into ids.txt in format [ID] [URL], each on separate line.
      *
      * @param url   Web page url

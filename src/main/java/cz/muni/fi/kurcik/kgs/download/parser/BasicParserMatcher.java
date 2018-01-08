@@ -1,6 +1,7 @@
 package cz.muni.fi.kurcik.kgs.download.parser;
 
 import java.net.URI;
+import java.util.HashSet;
 
 /**
  * Basic implementation of ParserMatcher
@@ -15,6 +16,8 @@ public class BasicParserMatcher implements ParserMatcher {
      */
     @Override
     public Parser getParser(URI url) {
+        if (HtmlParser.canBeParsed(url))
+            return new HtmlParser(url);
         return null;
     }
 }

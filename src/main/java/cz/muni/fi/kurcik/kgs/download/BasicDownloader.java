@@ -1,10 +1,14 @@
 package cz.muni.fi.kurcik.kgs.download;
 
 import cz.muni.fi.kurcik.kgs.download.parser.Parser;
+import cz.muni.fi.kurcik.kgs.download.parser.ParserException;
 import cz.muni.fi.kurcik.kgs.download.parser.ParserMatcher;
+import org.apache.commons.io.FileSystemUtils;
+import org.apache.commons.io.FilenameUtils;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,11 +33,11 @@ public class BasicDownloader implements Downloader {
     protected Path downloadDir;
     protected ParserMatcher parserMatcher;
 
-    protected HashSet<URI> parsedUrls = new HashSet<>();
-    protected HashMap<Integer, URI> urlsIds = new HashMap<>();
-    protected LinkedList<DownloadURL> queue = new LinkedList<>();
+    final protected HashSet<URI> parsedUrls = new HashSet<>();
+    final protected HashMap<Long, URI> urlsIds = new HashMap<>();
+    final protected LinkedList<DownloadURL> queue = new LinkedList<>();
 
-    protected int idCounter = 1;
+    protected long idCounter = 1;
 
     public BasicDownloader() {
         this(false);
@@ -82,7 +86,7 @@ public class BasicDownloader implements Downloader {
      */
     protected void createDownloadFolder() throws IOException {
         List<String> folders = Arrays.asList("", PARSED_FILES_DIR, ORIGINAL_FILES_DIR);
-        for (String folder: folders) {
+        for (String folder : folders) {
             try {
                 Files.createDirectories(downloadDir.resolve(folder));
             } catch (IOException e) {
@@ -92,12 +96,14 @@ public class BasicDownloader implements Downloader {
         }
     }
 
+
     /**
      * Downloads all files with supported formats from this domain. Data will be put into folder named after domain.
      * Files are downloaded only form specified domain and all domains that are number of specified hops away from this domain.
      * Downloads only files till specified depth, url is depth 0.
      *
-     * Each file have its original content saved as ID.extension and parsed content as ID.extension.txt, where ID is assigned by Downloader.
+     * Each file have its original content saved into original/ID.extension and parsed content as parsed/ID.txt, where ID is assigned by Downloader.
+     * URLs linked from site are put into ID.links file, each URL on separate line.
      * ID and URL pairs are saved into ids.txt in format [ID] [URL], each on separate line.
      *
      * @param url   Web page url
@@ -117,7 +123,8 @@ public class BasicDownloader implements Downloader {
         queue.add(new DownloadURL(url, 0, 0));
         while (!queue.isEmpty()) {
             DownloadURL durl = queue.pop();
-            if (parsedUrls.contains(durl.getUrl()))
+            URI normalizeUrl = normalizeUrl(durl.getUrl());
+            if (parsedUrls.contains(normalizeUrl))
                 continue;
             logger.info("Parsing " + durl.getUrl());
 
@@ -128,12 +135,35 @@ public class BasicDownloader implements Downloader {
                 continue;
             }
 
-            urlsIds.put(idCounter++, durl.getUrl());
-            addNewURLs(durl, parser.getLinks(), depth, hops);
-//            parser.saveContent(downloadDir.);
+            //@todo: check media language
 
-            parsedUrls.add(durl.getUrl());
+            Long id = nextId();
+            urlsIds.put(id, durl.getUrl());
+
+            logger.info("Downloading " + durl.getUrl());
+            String fileName = id + "." + parser.getExtension();
+            if (!parser.saveContent(downloadDir
+                    .resolve(ORIGINAL_FILES_DIR)
+                    .resolve(fileName))) {
+                logger.warning("Couldn't save " + durl.getUrl());
+            }
+
+            try {
+                if (!parser.saveParsed(downloadDir.resolve(PARSED_FILES_DIR).resolve(id + PARSED_EXTENSION))) {
+                    logger.warning("Couldn't save parsed " + durl.getUrl());
+                }
+            } catch (ParserException e) {
+                logger.warning("Couldn't parse " + durl.getUrl());
+                continue;
+            }
+
+            Set<URI> links = parser.getLinks();
+            saveUrls(downloadDir.resolve(id + LINKS_EXTENSION), links);
+            addNewURLs(durl, links, depth, hops);
+
+            parsedUrls.add(normalizeUrl);
             logger.info("Finished " + durl.getUrl());
+            break;
         }
 
         logger.info("Saving ID -> URL pairs");
@@ -144,18 +174,34 @@ public class BasicDownloader implements Downloader {
     }
 
     /**
+     * Removes fragment from URI
+     * @param uri
+     * @return uri without fragment
+     */
+    protected URI normalizeUrl(URI uri) {
+        if (uri.getFragment() == null)
+            return uri;
+        try {
+            return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), uri.getQuery());
+        } catch (URISyntaxException e) {
+            logger.warning("Couldn't normalize url " + uri.toString() + ": " + e.getMessage());
+        }
+        return uri;
+    }
+
+    /**
      * Add new URLs into queue if they are supposed to be added according to download parameters.
      * Depth can't exceed maxDepth and number of hops can't exceed maxHops.
      *
-     * @param parent Parent url
-     * @param links Set of new urls to be added into queue
+     * @param parent   Parent url
+     * @param links    Set of new urls to be added into queue
      * @param maxDepth Maximum depth from root URL
-     * @param maxHops Maximum number of hops from root URL
+     * @param maxHops  Maximum number of hops from root URL
      */
     protected void addNewURLs(DownloadURL parent, Set<URI> links, int maxDepth, int maxHops) {
         if (parent.getDepth() == maxDepth)
             return;
-        for (URI url: links) {
+        for (URI url : links) {
             int hops = parent.getHops();
             if (!parent.getUrl().getHost().equals(url.getHost())) {
                 hops++;
@@ -172,13 +218,34 @@ public class BasicDownloader implements Downloader {
      */
     protected void saveIdPairs() throws IOException {
         try {
-        Files.write(downloadDir.resolve("ids.txt"),
-                urlsIds.entrySet().stream().map(e -> e.getKey().toString() + " " + e.getValue().toString()).collect(Collectors.toList()),
-                Charset.forName("UTF-8"));
+            Files.write(downloadDir.resolve("ids.txt"),
+                    urlsIds.entrySet().stream().map(e -> e.getKey().toString() + " " + e.getValue().toString()).collect(Collectors.toList()),
+                    Charset.forName("UTF-8"));
         } catch (IOException e) {
             logger.severe("Couldn't save ID-URL pairs into file");
             throw e;
         }
+    }
+
+    /**
+     * Save set of urls into file. Each URL on separet line.
+     * @param file File to save into
+     * @param urls Set of urls
+     */
+    protected void saveUrls(Path file, Set<URI> urls) {
+        try {
+            Files.write(file, urls.stream().map(URI::toString).collect(Collectors.toList()), Charset.forName("UTF-8"));
+        } catch (IOException e) {
+            logger.severe("Couldn't save links into " + file.toString() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Return next ID for URL, starts from 0
+     * @return next ID
+     */
+    protected long nextId() {
+        return idCounter++;
     }
 
     /**

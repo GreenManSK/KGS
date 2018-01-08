@@ -25,12 +25,13 @@ public interface Parser {
      * Saves file content into file.
      * @param file Path to file
      * @return true if content was saved successfully
-     * @throws ParserException On parsing error
      */
-    boolean saveContent(Path file) throws ParserException;
+    boolean saveContent(Path file);
 
     /**
      * Saves parsed file content into file. Should be UTF8 encoded if possible.
+     * Should be used only after saveContent.
+     *
      * @param file Path to file
      * @return true if content was saved successfully
      * @throws ParserException On parsing error
@@ -38,7 +39,14 @@ public interface Parser {
     boolean saveParsed(Path file) throws ParserException;
 
     /**
+     * Return file type extension
+     * @return extension as string without starting dot
+     */
+    String getExtension();
+
+    /**
      * Check if URL can be parsed by this parser
+     * @param url URL
      * @return true if URL can be parsed
      */
     static boolean canBeParsed(URI url) {
