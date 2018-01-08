@@ -18,6 +18,8 @@ public class BasicParserMatcher implements ParserMatcher {
     public Parser getParser(URI url) {
         if (HtmlParser.canBeParsed(url))
             return new HtmlParser(url);
+        if (DocParser.canBeParsed(url))
+            return new DocParser(url);
         return null;
     }
 }
