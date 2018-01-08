@@ -9,16 +9,13 @@ import org.jsoup.select.Elements;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -108,13 +105,15 @@ public class HtmlParser extends AbstractParser {
     @Override
     public Set<URI> getLinks() {
         Document doc = getDocument();
+        if (doc == null)
+            return new HashSet<>();
         Elements aElements = doc.select("a[href]");
         HashSet<URI> links = new HashSet<>();
         for (Element a: aElements) {
             try {
                 links.add(new URI(a.attr("abs:href")));
             } catch (URISyntaxException e) {
-                e.printStackTrace();
+                logger.warning(e.getMessage());
             }
         }
         return links;
@@ -131,7 +130,10 @@ public class HtmlParser extends AbstractParser {
     @Override
     public boolean saveParsed(Path file) throws ParserException {
         try {
-            Element body = getDocument().select("body").first();
+            Document doc = getDocument();
+            if (doc == null)
+                return false;
+            Element body = doc.select("body").first();
             FileUtils.writeStringToFile(file.toFile(), body != null ? body.text() : "");
         } catch (IOException e) {
             logger.warning("IO exception for '" + url.toString() + "': " +e.getMessage());
