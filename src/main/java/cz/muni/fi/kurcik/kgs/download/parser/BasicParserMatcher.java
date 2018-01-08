@@ -20,6 +20,8 @@ public class BasicParserMatcher implements ParserMatcher {
             return new HtmlParser(url);
         if (DocParser.canBeParsed(url))
             return new DocParser(url);
+        if (DocxParser.canBeParsed(url))
+            return new DocxParser(url);
         return null;
     }
 }
