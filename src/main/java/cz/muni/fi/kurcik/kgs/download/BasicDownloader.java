@@ -155,7 +155,7 @@ public class BasicDownloader implements Downloader {
         logger.info("Linking " + url);
         Set<URI> links = parser.getLinks();
         urlContainer.push(durl, links);
-        saveUrls(downloadDir.resolve(urlContainer.getNextId() + LINKS_EXTENSION), links);
+        saveUrls(downloadDir.resolve(LINKS_FILES_DIR).resolve(urlContainer.getNextId() + LINKS_EXTENSION), links);
 
         urlContainer.setAsParsed(url);
         logger.info("Finished " + url);
@@ -181,7 +181,7 @@ public class BasicDownloader implements Downloader {
      * @throws IOException if there is problem with creating folder
      */
     protected void createDownloadFolder() throws IOException {
-        List<String> folders = Arrays.asList("", PARSED_FILES_DIR, ORIGINAL_FILES_DIR);
+        List<String> folders = Arrays.asList("", PARSED_FILES_DIR, ORIGINAL_FILES_DIR, LINKS_FILES_DIR);
         for (String folder : folders) {
             try {
                 Files.createDirectories(downloadDir.resolve(folder));
