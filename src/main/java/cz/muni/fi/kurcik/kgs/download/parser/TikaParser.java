@@ -82,7 +82,13 @@ public class TikaParser implements Parser {
         LinkContentHandler linkHandler = new LinkContentHandler();
         try {
             parse(linkHandler);
-            return linkHandler.getLinks().stream().map(link -> url.resolve(link.getUri())).collect(Collectors.toSet());
+            return linkHandler.getLinks().stream().map(link -> {
+                try {
+                    return url.resolve(link.getUri());
+                } catch (IllegalArgumentException e) {
+                    return url;
+                }
+            }).collect(Collectors.toSet());
         } catch (ParserException e) {
         }
         return Collections.emptySet();
