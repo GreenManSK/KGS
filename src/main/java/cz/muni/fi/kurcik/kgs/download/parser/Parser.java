@@ -1,5 +1,6 @@
 package cz.muni.fi.kurcik.kgs.download.parser;
 
+import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Set;
@@ -16,40 +17,30 @@ public interface Parser {
     URI getUrl();
 
     /**
+     * Get file to be parsed
+     * @return File
+     */
+    Path getFile();
+
+    /**
      * Return set of unique URLs linked from this page. If there is
      * @return set of unique URLs
      */
     Set<URI> getLinks();
 
     /**
-     * Saves file content into file.
-     * @param file Path to file
-     * @return true if content was saved successfully
-     */
-    boolean saveContent(Path file);
-
-    /**
-     * Saves parsed file content into file. Should be UTF8 encoded if possible.
-     * Should be used only after saveContent.
+     * Parse content from file into string
      *
-     * @param file Path to file
-     * @return true if content was saved successfully
+     * @return String with file content
      * @throws ParserException On parsing error
      */
-    boolean saveParsed(Path file) throws ParserException;
+    String getContent() throws ParserException;
 
     /**
-     * Return file type extension
-     * @return extension as string without starting dot
+     * Check if File can be parsed by this parser
+     * @return true if file can be parsed
      */
-    String getExtension();
+    boolean canBeParsed();
 
-    /**
-     * Check if URL can be parsed by this parser
-     * @param url URL
-     * @return true if URL can be parsed
-     */
-    static boolean canBeParsed(URI url) {
-        return true;
-    }
+
 }

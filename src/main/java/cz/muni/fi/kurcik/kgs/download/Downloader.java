@@ -1,7 +1,5 @@
 package cz.muni.fi.kurcik.kgs.download;
 
-import cz.muni.fi.kurcik.kgs.download.parser.ParserMatcher;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
@@ -16,7 +14,6 @@ public interface Downloader {
     String PARSED_FILES_DIR = "parsed";
     String PARSED_EXTENSION = ".txt";
     String LINKS_EXTENSION = ".links";
-
 
     /**
      * Downloads all files with supported formats from this domain. Data will be put into folder named after domain.
@@ -47,11 +44,4 @@ public interface Downloader {
      * @return directory to download folder
      */
     Path getDownloadDirectory();
-
-    /**
-     * Set parsers matcher to be used while downloading
-     *
-     * @param parserMatcher ParserMatcher
-     */
-    void setParserMatcher(ParserMatcher parserMatcher);
 }
