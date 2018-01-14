@@ -1,6 +1,6 @@
 package cz.muni.fi.kurcik.kgs.download.parser;
 
-import org.apache.tika.Tika;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
@@ -8,6 +8,7 @@ import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.html.BoilerpipeContentHandler;
 import org.apache.tika.sax.BodyContentHandler;
 import org.apache.tika.sax.LinkContentHandler;
 import org.xml.sax.ContentHandler;
@@ -35,7 +36,7 @@ public class TikaParser implements Parser {
     protected Metadata metadata;
 
     private org.apache.tika.parser.Parser parser;
-    private BodyContentHandler bodyHandler = new BodyContentHandler();
+    private ContentHandler bodyHandler = new BodyContentHandler();
     private boolean bodyParsed = false;
 
     /**
@@ -103,7 +104,7 @@ public class TikaParser implements Parser {
     @Override
     public String getContent() throws ParserException {
         if (!bodyParsed) {
-            parse(bodyHandler);
+            parse(getBodyHandler());
         }
         return bodyHandler.toString();
     }
@@ -118,7 +119,7 @@ public class TikaParser implements Parser {
         try {
             if (bodyParsed)
                 return true;
-            parse(bodyHandler);
+            parse(getBodyHandler());
             bodyParsed = true;
         } catch (ParserException e) {
             return false;
@@ -157,5 +158,13 @@ public class TikaParser implements Parser {
         } catch (MimeTypeException e) {
             return ".ukw";
         }
+    }
+
+    /**
+     * Return right BodyHandler based on type of file. Use content detector for HTML
+     * @return body handler
+     */
+    protected ContentHandler getBodyHandler() {
+        return FilenameUtils.getExtension(file.toString()).compareToIgnoreCase("html") != 0  ? bodyHandler : new BoilerpipeContentHandler(bodyHandler);
     }
 }

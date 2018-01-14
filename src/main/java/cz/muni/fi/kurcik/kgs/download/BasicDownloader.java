@@ -145,7 +145,6 @@ public class BasicDownloader implements Downloader {
             return;
         }
 
-
         logger.info("Language detection " + url);
         LanguageResult result = languageDetector.detectAll(content).get(0);
         if (!result.getLanguage().equals(language)) {
