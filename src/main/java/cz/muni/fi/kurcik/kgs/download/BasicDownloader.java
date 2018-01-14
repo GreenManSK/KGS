@@ -11,12 +11,16 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.tika.language.detect.LanguageDetector;
 import org.apache.tika.language.detect.LanguageResult;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -87,7 +91,7 @@ public class BasicDownloader implements Downloader {
         logger.info("Started parsing domain " + url);
         urlContainer.push(url, 0, 0);
         while (!urlContainer.isEmpty()) {
-            parse(urlContainer.pop(), hops, depth);
+            parse(urlContainer.pop());
         }
 
         logger.info("Saving ID -> URL pairs");
@@ -95,9 +99,16 @@ public class BasicDownloader implements Downloader {
         logger.info("Finished parsing domain " + url);
     }
 
-    protected void parse(DownloadURL durl, int maxHops, int maxDeph) {
+    protected void parse(DownloadURL durl) {
         URI url = durl.getUrl();
         logger.info("Parsing " + url);
+
+        URI newUrl = resolveRedirects(url);
+        if (!url.equals(newUrl)) {
+            logger.info("Redirect from " + url + " to " + newUrl);
+            urlContainer.push(newUrl, durl.getDepth(), durl.getHops());
+            return;
+        }
 
         String extension = FilenameUtils.getExtension(url.getPath());
         if (extension == null || extension.equals("")) {
@@ -126,7 +137,7 @@ public class BasicDownloader implements Downloader {
         }
 
         logger.info("Parsing " + url);
-        String content = null;
+        String content;
         try {
             content = parser.getContent();
         } catch (ParserException e) {
@@ -163,6 +174,7 @@ public class BasicDownloader implements Downloader {
 
     /**
      * Get content type from URL
+     *
      * @param url
      * @return content type or null
      */
@@ -174,6 +186,42 @@ public class BasicDownloader implements Downloader {
         }
         return null;
     }
+
+
+    /**
+     * Resolve redirects for URL and returns the final landing page url
+     *
+     * @param url Original URL
+     * @return Original URL or new URL after redirects
+     */
+    protected URI resolveRedirects(URI url) {
+        return resolveRedirects(url, 0, 5);
+    }
+
+    /**
+     * Resolve redirects for URL and returns the final landing page url
+     *
+     * @param url Original URL
+     * @param num Actual number of redirects
+     * @param max Maximum number of redirects to prevent loops
+     * @return Original URL or new URL after redirects
+     */
+    protected URI resolveRedirects(URI url, int num, int max) {
+        if (num == max)
+            return url;
+        try {
+            HttpURLConnection connection = (HttpURLConnection) url.toURL().openConnection();
+            int status = connection.getResponseCode();
+            if (status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpsURLConnection.HTTP_SEE_OTHER) {
+                String newUrl = connection.getHeaderField("Location");
+                return url.resolve(newUrl);
+            }
+        } catch (IOException e) {
+            logger.log(Level.WARNING, url.toString(), e);
+        }
+        return url;
+    }
+
 
     /**
      * Creates folder for downloading URL and its sub-folders.
