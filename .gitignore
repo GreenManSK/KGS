@@ -1,2 +1,5 @@
 .idea/*
 *.class
+*.iml
+target/*
+out*/
