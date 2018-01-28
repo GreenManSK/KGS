@@ -14,6 +14,7 @@ import java.util.stream.Stream;
  * where [M] is the number of unique terms in the document, and the
  * [count] associated with each term is how many times that term appeared
  * in the document.  Note that [term_1] is an integer which indexes the term; it is not a string.
+ * @author Lukáš Kurčík
  */
 public class Corpus {
     final protected Vocabulary vocabulary;

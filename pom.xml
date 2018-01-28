@@ -47,5 +47,10 @@
             <version>${tika.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.github.arnim</groupId>
+            <artifactId>HDP</artifactId>
+            <version>-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>

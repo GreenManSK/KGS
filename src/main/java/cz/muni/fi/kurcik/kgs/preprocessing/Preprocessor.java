@@ -6,18 +6,14 @@ import java.nio.file.Path;
 /**
  * Interface for preprocessing of downloaded data
  * <p>
- * Should be able to create files with normalized words from parsed files.
+ * Should be able to create files with normalized words from parsed files and prepare them for clustering.
  *
  * @author Lukáš Kurčík
- * @todo: and more
  */
 public interface Preprocessor {
 
     String NORMALIZED_FILES_DIR = "normalized";
     String NORMALIZED_FILE_EXTENSION = ".txt";
-    String CLUSTERING_FILES_DIR = "clustering";
-    String VOCAB_FILE = "vocab.txt";
-    String CORPUS_FILE = "corpus.dat";
 
     /**
      * Takes all files from Downloader.PARSED_FILES_DIR, takes words from them, normalizes them and saves them into NORMALIZED_FILES_DIR.
@@ -27,7 +23,7 @@ public interface Preprocessor {
     void normalizeParsedFiles() throws IOException;
 
     /**
-     * Creates two files in CLUSTERING_FILES_DIR.
+     * Creates two files in Clustering.CLUSTERING_FILES_DIR.
      * vocab.txt contains all words from all documents. Each word on one line. Line number indicate word ID, lines are numbered from 0.
      * corpus.dat with data about all documents. Each line is in format
      * File formats are described in Corpus and Vocabulary classes

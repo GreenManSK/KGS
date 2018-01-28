@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
+import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CORPUS_FILE;
+import static cz.muni.fi.kurcik.kgs.clustering.Clustering.VOCAB_FILE;
+
 /**
  * Preprocessor implementation using Majka
  *

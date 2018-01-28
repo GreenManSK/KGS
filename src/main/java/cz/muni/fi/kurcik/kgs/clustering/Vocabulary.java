@@ -15,6 +15,7 @@ import java.util.TreeMap;
  * <p>
  * File format:
  * Each line should contain one word. Lines are used as word id and are counted from 0
+ * @author Lukáš Kurčík
  */
 public class Vocabulary {
 
