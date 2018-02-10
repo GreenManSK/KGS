@@ -52,7 +52,7 @@ public class HDPDistanceModel implements DistanceModel {
         int documents = StringUtils.countMatches(lines.get(0), " ");
         double[][] probabilities = new double[documents][topics];
         for (int i = 0; i < topics; i++) {
-            probabilities[i] = Arrays.stream(lines.get(0).split(" ")).mapToDouble(Double::parseDouble).toArray();
+            probabilities[i] = Arrays.stream(lines.get(i).split(" ")).mapToDouble(Double::parseDouble).toArray();
         }
         compute(probabilities);
     }
