@@ -38,7 +38,7 @@ public class BasicDownloader implements Downloader {
 
     protected Path downloadDir;
 
-    protected UrlContainer urlContainer = new BasicUrlContainer();
+    protected UrlContainer urlContainer;
 
     /**
      * Create new basic downloader
@@ -66,6 +66,7 @@ public class BasicDownloader implements Downloader {
         this.logger = logger;
 
         this.languageDetector.loadModels();
+        this.urlContainer = new BasicUrlContainer(logger);
     }
 
     /**
@@ -215,7 +216,7 @@ public class BasicDownloader implements Downloader {
                 String newUrl = connection.getHeaderField("Location");
                 return url.resolve(newUrl);
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassCastException e) {
             logger.log(Level.WARNING, url.toString(), e);
         }
         return url;

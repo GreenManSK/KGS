@@ -89,6 +89,11 @@ public class TikaParser implements Parser {
                 } catch (IllegalArgumentException e) {
                     return url;
                 }
+            }).map(uri -> {
+                if (uri.getPath() == null)
+                    return uri.resolve("/");
+                else
+                    return uri;
             }).collect(Collectors.toSet());
         } catch (ParserException e) {
         }

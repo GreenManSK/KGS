@@ -5,6 +5,7 @@ import cz.muni.fi.kurcik.kgs.download.containers.UrlContainer;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -115,9 +116,13 @@ public class BasicUrlContainer implements UrlContainer {
     public void push(URI url, int depth, int hops) {
         if (isParsed(url))
             return;
-        if (depth > maxDepth || hops > maxHops)
+
+        if (depth > maxDepth || hops > maxHops) {
+            logger.log(Level.INFO, "Rejected: " + url);
             return;
-        queue.push(new DownloadURL(url, hops, depth));
+        }
+        DownloadURL downloadURL = new DownloadURL(url, hops, depth);
+        queue.push(downloadURL);
     }
 
     /**
@@ -128,7 +133,10 @@ public class BasicUrlContainer implements UrlContainer {
     @Override
     public void push(DownloadURL parent, URI url) {
         int hops = parent.getHops();
-        if (!parent.getUrl().getHost().equals(url.getHost())) {
+
+        String host = normalizeUrl(parent.getUrl()).getHost().replaceAll("^www.", "");
+
+        if (!normalizeUrl(url).toString().contains(host)) {
             hops++;
         }
         push(url, parent.getDepth() + 1, hops);
@@ -152,7 +160,11 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public DownloadURL pop() {
-        return queue.pop();
+        DownloadURL pop = queue.pop();
+        while (pop != null && isParsed(pop.getUrl())) {
+            pop = queue.pop();
+        }
+        return pop;
     }
 
     /**
@@ -175,7 +187,12 @@ public class BasicUrlContainer implements UrlContainer {
         if (uri.getFragment() == null)
             return uri;
         try {
-            return new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), uri.getQuery());
+            String path;
+            if (uri.getPath() != null && uri.getPath().endsWith("/"))
+                path = uri.getPath().replaceAll("/$", "");
+            else
+                path = uri.getPath();
+            return new URI("http", uri.getAuthority(), path, uri.getQuery());
         } catch (URISyntaxException e) {
             logger.warning("Couldn't normalize url " + uri + ": " + e.getMessage());
         }
