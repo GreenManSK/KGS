@@ -6,6 +6,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,6 +46,8 @@ public class UrlIndex {
     public UrlIndex(Path file) throws IOException {
         try (Stream<String> stream = Files.lines(file)) {
             stream.forEach(line -> {
+                if (line.isEmpty())
+                    return;
                 String[] parts = line.split(" ");
                 add(Long.parseLong(parts[0]), URI.create(parts[1]));
             });
@@ -60,12 +63,26 @@ public class UrlIndex {
      * @return id or null
      */
     public Long getId(URI url) {
+        System.out.println("----");
+        System.out.println(url);
         url = normalize(url);
+        System.out.println(url);
         Long id = urlToId.get(url);
         if (id != null) {
             return id;
         }
+
         return urlToId.get(UriBuilder.fromUri(url).scheme(url.getScheme().equals("http") ? "https" : "http").build());
+    }
+
+    /**
+     * Return ID of url or null
+     *
+     * @param url URL
+     * @return id or null
+     */
+    public Long getId(String url) {
+        return getId(URI.create(url));
     }
 
     /**
@@ -109,11 +126,6 @@ public class UrlIndex {
      * @throws IOException when there is IO problem
      */
     public void save(Path file) throws IOException {
-        try {
-            Files.write(file,
-                    urlToId.entrySet().stream().map(e -> e.getKey().toString() + " " + e.getValue().toString()).collect(Collectors.toList()), Charset.forName("UTF-8"));
-        } catch (IOException e) {
-            throw e;
-        }
+        Files.write(file, urlToId.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getValue)).map(e -> e.getKey().toString() + " " + e.getValue().toString()).collect(Collectors.toList()), Charset.forName("UTF-8"));
     }
 }
