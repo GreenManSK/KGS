@@ -90,7 +90,7 @@ public class TikaParser implements Parser {
                     return url;
                 }
             }).map(uri -> {
-                if (uri.getPath() == null)
+                if (uri.getPath() == null || uri.getPath().isEmpty())
                     return uri.resolve("/");
                 else
                     return uri;

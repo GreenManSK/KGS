@@ -102,7 +102,7 @@ public class BasicDownloader implements Downloader {
 
     protected void parse(DownloadURL durl) {
         URI url = durl.getUrl();
-        logger.info("Parsing " + url);
+        logger.info("Parsing " + url + "; depth: " + durl.getDepth() + "; hops: " + durl.getHops());
 
         URI newUrl = resolveRedirects(url);
         if (!url.equals(newUrl)) {

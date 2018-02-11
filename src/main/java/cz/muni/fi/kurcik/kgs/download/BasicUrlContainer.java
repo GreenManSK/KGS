@@ -118,7 +118,7 @@ public class BasicUrlContainer implements UrlContainer {
             return;
 
         if (depth > maxDepth || hops > maxHops) {
-            logger.log(Level.INFO, "Rejected: " + url);
+            logger.log(Level.INFO, "Rejected: " + url + "; depth: " + depth + "; hops: " +hops);
             return;
         }
         DownloadURL downloadURL = new DownloadURL(url, hops, depth);
