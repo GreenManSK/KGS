@@ -6,6 +6,7 @@ import cz.muni.fi.kurcik.kgs.download.parser.Parser;
 import cz.muni.fi.kurcik.kgs.download.parser.ParserException;
 import cz.muni.fi.kurcik.kgs.download.parser.ParserFactory;
 import cz.muni.fi.kurcik.kgs.download.parser.TikaParser;
+import cz.muni.fi.kurcik.kgs.util.UrlIndex;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.tika.language.detect.LanguageDetector;
@@ -246,10 +247,9 @@ public class BasicDownloader implements Downloader {
      * Format for each pair is [ID] [URL]
      */
     protected void saveIdPairs() throws IOException {
+        UrlIndex urlIndex = new UrlIndex(urlContainer.getIdUrlPairs());
         try {
-            Files.write(downloadDir.resolve("ids.txt"),
-                    urlContainer.getIdUrlPairs().entrySet().stream().map(e -> e.getKey().toString() + " " + e.getValue().toString()).collect(Collectors.toList()),
-                    Charset.forName("UTF-8"));
+            urlIndex.save(downloadDir.resolve("ids.txt"));
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Couldn't save ID-URL pairs into file", e);
             throw e;
