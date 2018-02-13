@@ -59,6 +59,7 @@ public class MajkaPreprocessor implements Preprocessor {
      */
     @Override
     public void normalizeParsedFiles() throws IOException {
+        logger.log(Level.INFO, "Normalizing parsed files");
         createProcessedFolder();
 
         Path parsedDir = downloadDir.resolve(Downloader.PARSED_FILES_DIR);
@@ -84,6 +85,7 @@ public class MajkaPreprocessor implements Preprocessor {
             }
         }
         FileUtils.deleteDirectory(scriptDir.toFile());
+        logger.log(Level.INFO, "Normalization finished");
     }
 
     /**
@@ -96,6 +98,7 @@ public class MajkaPreprocessor implements Preprocessor {
      */
     @Override
     public void prepareClusteringFiles() throws IOException {
+        logger.log(Level.INFO, "Preparing clustering files.");
         createCorpusFolder();
         Corpus corpus = new Corpus();
 
@@ -110,6 +113,7 @@ public class MajkaPreprocessor implements Preprocessor {
 
         corpus.save(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CORPUS_FILE));
         corpus.getVocabulary().save(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(VOCAB_FILE));
+        logger.log(Level.INFO, "Finished preparing clustering files.");
     }
 
     /**

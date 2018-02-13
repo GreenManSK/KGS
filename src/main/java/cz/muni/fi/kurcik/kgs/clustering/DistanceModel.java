@@ -14,7 +14,7 @@ public interface DistanceModel {
      * @param documentId document id
      * @return distance from cluster centroid
      */
-    double centroidDistance(int clusterId, int documentId);
+    double distanceFromCentroid(int clusterId, int documentId);
 
     /**
      * Return mean distance of all documents in this cluster from it's centroid
@@ -29,4 +29,12 @@ public interface DistanceModel {
      * @return median distance of documents from centroid
      */
     double medianDistance(int clusterId);
+
+    /**
+     * Return distance between two clusters
+     * @param clusterA id of first cluster
+     * @param clusterB id of second cluster
+     * @return distance between clusters
+     */
+    double centroidDistance(int clusterA, int clusterB);
 }

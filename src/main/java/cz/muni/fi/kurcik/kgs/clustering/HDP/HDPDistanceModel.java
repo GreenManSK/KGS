@@ -73,17 +73,28 @@ public class HDPDistanceModel implements DistanceModel {
         medians = new double[topics];
 
         for (int topic = 0; topic < topics; ++topic) {
-            double distanceSum = 0;
-
-            double[] topicArray = new double[topics];
-            topicArray[topic] = 1;
-            Vector topicVector = Vector.of(topicArray);
-            for (int document = 0; document < documents; ++document) {
-                distances[topic][document] = Math.sqrt(JSD(topicVector, Vector.of(probabilities[document])));
-            }
-            means[topic] = distanceSum / documents;
-            medians[topic] = getMedian(distances[topic]);
+            computeDocumentDistance(topics, topic, documents, probabilities);
         }
+    }
+
+    /**
+     * Compute distances of all documents from topic
+     * @param topics array of topics
+     * @param topic topic id
+     * @param documents array of documents
+     * @param probabilities array of probabilities
+     */
+    protected void computeDocumentDistance(int topics, int topic, int documents, double[][] probabilities) {
+        double distanceSum = 0;
+
+        double[] topicArray = new double[topics];
+        topicArray[topic] = 1;
+        Vector topicVector = Vector.of(topicArray);
+        for (int document = 0; document < documents; ++document) {
+            distances[topic][document] = Math.sqrt(JSD(topicVector, Vector.of(probabilities[document])));
+        }
+        means[topic] = distanceSum / documents;
+        medians[topic] = getMedian(distances[topic]);
     }
 
     /**
@@ -116,6 +127,18 @@ public class HDPDistanceModel implements DistanceModel {
     }
 
     /**
+     * Return distance between two clusters
+     *
+     * @param clusterA id of first cluster
+     * @param clusterB id of second cluster
+     * @return distance between clusters
+     */
+    @Override
+    public double centroidDistance(int clusterA, int clusterB) {
+        return 2; // JSD between two centroid vectors is always 2
+    }
+
+    /**
      * Return distance of document from centroid of cluster
      *
      * @param clusterId  cluster id
@@ -123,7 +146,7 @@ public class HDPDistanceModel implements DistanceModel {
      * @return distance from cluster centroid
      */
     @Override
-    public double centroidDistance(int clusterId, int documentId) {
+    public double distanceFromCentroid(int clusterId, int documentId) {
         return distances[clusterId][documentId];
     }
 

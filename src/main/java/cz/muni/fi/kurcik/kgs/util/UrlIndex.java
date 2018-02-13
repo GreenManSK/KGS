@@ -49,7 +49,7 @@ public class UrlIndex {
                 if (line.isEmpty())
                     return;
                 String[] parts = line.split(" ");
-                add(Long.parseLong(parts[0]), URI.create(parts[1]));
+                add(Long.parseLong(parts[1]), URI.create(parts[0]));
             });
         } catch (IOException e) {
             throw e;
@@ -63,10 +63,7 @@ public class UrlIndex {
      * @return id or null
      */
     public Long getId(URI url) {
-        System.out.println("----");
-        System.out.println(url);
         url = normalize(url);
-        System.out.println(url);
         Long id = urlToId.get(url);
         if (id != null) {
             return id;

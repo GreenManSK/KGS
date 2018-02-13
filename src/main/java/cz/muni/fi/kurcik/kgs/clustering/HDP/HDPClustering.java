@@ -1,15 +1,18 @@
 package cz.muni.fi.kurcik.kgs.clustering.HDP;
 
 import cz.muni.fi.kurcik.kgs.clustering.Clustering;
+import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
+import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
 import cz.muni.fi.kurcik.kgs.util.LogOutputStream;
 import de.uni_leipzig.informatik.asv.utils.CLDACorpus;
+import org.apache.commons.io.FileUtils;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,44 +44,71 @@ public class HDPClustering implements Clustering {
 
     /**
      * Takes prerocessed data from CLUSTERING_FILES_DIR and makes clusters from them.
-     * Saves list of topic probabilities for each document into CLUSTERING_FILE
+     * Saves list of topic probabilities for each document into CLUSTERING_FILE and each cluster into separate file
      *
      * @throws IOException when there is problem with file IO
      */
     @Override
     public void cluster() throws IOException {
+        logger.info("Starting clustering");
         try (FileInputStream fileInputStream = new FileInputStream(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CORPUS_FILE).toFile())) {
             HDPGibbsSampler2 hdp = new HDPGibbsSampler2();
+            logger.info("Preparing corpus");
             CLDACorpus corpus = new CLDACorpus(fileInputStream);
+
+            logger.info("Preparing HDP");
             hdp.addInstances(corpus.getDocuments(), corpus.getVocabularySize());
 
+            logger.info("Computing HDP");
             hdp.run(0, 2000, new PrintStream(new LogOutputStream(logger, Level.INFO)));
+
+            logger.info("Saving model");
             saveModel(hdp);
+
+            logger.info("Saving clusters");
             saveClusters(hdp, corpus);
+
+            logger.info("Computing index of clustering");
+            computeClusteringIndex();
+
+            logger.info("Clustering finished");
         }
     }
 
     /**
-     * Saves clusters into CLUSTERING_FILE
+     * Computes and log clustering index
+     *
+     * @throws IOException when there is problem with file IO
+     */
+    protected void computeClusteringIndex() throws IOException {
+        try {
+            HDPClusteringModel model = new HDPClusteringModel(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
+            GradedDistanceIndex gdi = new GradedDistanceIndex();
+            logger.info("GD_index for clustering: " + gdi.compute(model));
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Error while loading clusters", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Saves clusters into CLUSTERING_FILE and each cluster into separate file
      *
      * @param hdp    Finished HDP sampler
      * @param corpus Corpus with documents form HDP sampler
-     * @throws IOException
+     * @throws IOException when there is problem with file IO
      */
     protected void saveClusters(HDPGibbsSampler2 hdp, CLDACorpus corpus) throws IOException {
-
-        try (PrintStream stream = new PrintStream(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE).toString())) {
+        try {
             HDPModel model = hdp.getModel();
-            for (int[] document : corpus.getDocuments()) {
-                double[] vector = model.clasifyDoc(document);
-                    for (double prob: vector) {
-                        stream.format("%.5f ", prob);
-                    }
-                stream.println();
-            }
-        } catch (FileNotFoundException e) {
+            int[][] documents = corpus.getDocuments();
+            logger.info("Saving clustering probabilities");
+            ClusterSaver.saveClustering(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
+            logger.info("Saving clusters into files");
+            ClusterSaver.saveClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR));
+        } catch (IOException e) {
             logger.log(Level.SEVERE, "Error while saving clusters", e);
-            throw new IOException(e);
+            throw e;
         }
     }
 
@@ -86,12 +116,14 @@ public class HDPClustering implements Clustering {
      * Saves HDP model into file
      *
      * @param hdp Finished HDP sampler
+     * @throws IOException when there is problem with file IO
      */
-    protected void saveModel(HDPGibbsSampler2 hdp) {
+    protected void saveModel(HDPGibbsSampler2 hdp) throws IOException {
         try {
             hdp.saveModel(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(MODEL_FILE));
         } catch (IOException e) {
             logger.log(Level.WARNING, "Error while saving clustering model", e);
+            throw e;
         }
     }
 

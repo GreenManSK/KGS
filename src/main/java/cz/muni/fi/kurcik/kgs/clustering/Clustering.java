@@ -15,7 +15,7 @@ public interface Clustering {
 
     /**
      * Takes prerocessed data from CLUSTERING_FILES_DIR and makes clusters from them.
-     * Saves list of topic probabilities for each document into file
+     * Saves list of topic probabilities for each document into file and each cluster into separate file
      * @throws IOException when there is problem with file IO
      */
     void cluster() throws IOException;

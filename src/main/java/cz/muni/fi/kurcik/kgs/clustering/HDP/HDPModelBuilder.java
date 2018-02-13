@@ -44,7 +44,7 @@ public class HDPModelBuilder {
      * @return builder
      */
     public HDPModelBuilder addTopicWordCount(int topicId, int wordId, int count) {
-        topicToWordCounts.get(topicId)[wordId] = count;
+        topicToWordCounts.get(topicId)[wordId] += count;
         wordCount[wordId] += count;
         return this;
     }
