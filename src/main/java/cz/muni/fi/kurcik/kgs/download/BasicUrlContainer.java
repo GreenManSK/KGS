@@ -19,7 +19,7 @@ public class BasicUrlContainer implements UrlContainer {
 
     final protected HashSet<URI> parsedUrls = new HashSet<>();
     final protected HashMap<Long, URI> urlsIds = new HashMap<>();
-    final protected LinkedList<DownloadURL> queue = new LinkedList<>();
+    final protected PriorityQueue<DownloadURL> queue = new PriorityQueue<>();
 
     protected long idCounter = 1;
 
@@ -122,7 +122,7 @@ public class BasicUrlContainer implements UrlContainer {
             return;
         }
         DownloadURL downloadURL = new DownloadURL(url, hops, depth);
-        queue.push(downloadURL);
+        queue.add(downloadURL);
     }
 
     /**
@@ -160,9 +160,9 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public DownloadURL pop() {
-        DownloadURL pop = queue.pop();
+        DownloadURL pop = queue.poll();
         while (pop != null && isParsed(pop.getUrl())) {
-            pop = queue.pop();
+            pop = queue.poll();
         }
         return pop;
     }
