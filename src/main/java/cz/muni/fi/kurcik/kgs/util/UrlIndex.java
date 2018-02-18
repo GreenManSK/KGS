@@ -88,7 +88,7 @@ public class UrlIndex {
      * @param id ID
      * @return url or null
      */
-    public URI getUrl(int id) {
+    public URI getUrl(long id) {
         return idToUrl.get(id);
     }
 
