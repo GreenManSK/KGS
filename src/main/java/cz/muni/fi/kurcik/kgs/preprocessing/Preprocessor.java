@@ -1,5 +1,7 @@
 package cz.muni.fi.kurcik.kgs.preprocessing;
 
+import cz.muni.fi.kurcik.kgs.clustering.corpus.Corpus;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -28,9 +30,10 @@ public interface Preprocessor {
      * corpus.dat with data about all documents. Each line is in format
      * File formats are described in Corpus and Vocabulary classes
      *
+     * @param corpus Corpus builder
      * @throws IOException when there is problem with file IO
      */
-    void prepareClusteringFiles() throws IOException;
+    void prepareClusteringFiles(Corpus corpus) throws IOException;
 
     /**
      * Sets download directory for downloader. All data will be put into dirName/url

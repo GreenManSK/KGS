@@ -1,4 +1,4 @@
-package cz.muni.fi.kurcik.kgs.clustering;
+package cz.muni.fi.kurcik.kgs.clustering.corpus;
 
 import com.drew.lang.Charsets;
 import org.apache.commons.collections4.BidiMap;
@@ -7,7 +7,10 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -20,15 +23,27 @@ import java.util.stream.Collectors;
  */
 public class Vocabulary {
 
-    protected final BidiMap<String, Integer> word2id;
-    protected final BidiMap<Integer, String> id2word;
+    private int idCounter = 0;
+    protected final HashMap<String, Integer> word2id;
+    protected final HashMap<Integer, String> id2word;
 
     /**
      * Creates empty vocabulary
      */
     public Vocabulary() {
-        word2id = new DualHashBidiMap<>();
-        id2word = word2id.inverseBidiMap();
+        word2id = new HashMap<>();
+        id2word = new HashMap<>();
+    }
+
+    /**
+     * Construct new vocabulary based on old one but generates new word ids
+     * @param old Old vocabulary
+     */
+    public Vocabulary(Vocabulary old) {
+        this();
+        for (String word : old.word2id.keySet()) {
+            addWord(word);
+        }
     }
 
     /**
@@ -64,8 +79,10 @@ public class Vocabulary {
      * @param word
      */
     public void addWord(String word) {
+        word = word.toLowerCase();
         if (!word2id.containsKey(word)) {
-            word2id.put(word, id2word.size() - 1);
+            word2id.put(word, idCounter);
+            id2word.put(idCounter++, word);
         }
     }
 
@@ -76,6 +93,7 @@ public class Vocabulary {
      * @return Id for word or null
      */
     public Integer getId(String word) {
+        word = word.toLowerCase();
         return word2id.get(word);
     }
 
@@ -90,7 +108,7 @@ public class Vocabulary {
         if (id != null)
             return id;
         addWord(word);
-        return word2id.size() - 1;
+        return getId(word);
     }
 
     /**
@@ -99,6 +117,7 @@ public class Vocabulary {
      * @param word word
      */
     public void remove(String word) {
+        id2word.remove(getId(word));
         word2id.remove(word);
     }
 
@@ -118,7 +137,7 @@ public class Vocabulary {
      * @return number of words in vocabulary
      */
     public int size() {
-        return id2word.size();
+        return word2id.size();
     }
 
     /**
@@ -129,5 +148,13 @@ public class Vocabulary {
      */
     public void save(Path file) throws IOException {
         FileUtils.writeLines(file.toFile(), word2id.entrySet().stream().map(it -> it.getValue() + " " + it.getKey()).collect(Collectors.toList()));
+    }
+
+    /**
+     * Return pairs of id and words
+     * @return word-id pairing map
+     */
+    public Map<Integer, String> getPairs() {
+        return Collections.unmodifiableMap(id2word);
     }
 }

@@ -4,6 +4,7 @@ import cz.muni.fi.kurcik.kgs.clustering.Clustering;
 import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
 import cz.muni.fi.kurcik.kgs.util.LogOutputStream;
+import cz.muni.fi.kurcik.kgs.util.UrlIndex;
 import de.uni_leipzig.informatik.asv.utils.CLDACorpus;
 import org.apache.commons.io.FileUtils;
 
@@ -53,6 +54,8 @@ public class HDPClustering implements Clustering {
         logger.info("Starting clustering");
         try (FileInputStream fileInputStream = new FileInputStream(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CORPUS_FILE).toFile())) {
             HDPGibbsSampler2 hdp = new HDPGibbsSampler2();
+            hdp.alpha = 4.0;
+            hdp.beta = 2.0;
             logger.info("Preparing corpus");
             CLDACorpus corpus = new CLDACorpus(fileInputStream);
 
@@ -105,7 +108,7 @@ public class HDPClustering implements Clustering {
             logger.info("Saving clustering probabilities");
             ClusterSaver.saveClustering(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
             logger.info("Saving clusters into files");
-            ClusterSaver.saveClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR));
+            ClusterSaver.saveClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR), new UrlIndex(downloadDir.resolve("ids.txt")));
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Error while saving clusters", e);
             throw e;

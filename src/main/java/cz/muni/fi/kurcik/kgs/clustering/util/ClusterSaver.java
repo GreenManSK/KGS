@@ -1,15 +1,15 @@
 package cz.muni.fi.kurcik.kgs.clustering.util;
 
+import cz.muni.fi.kurcik.kgs.clustering.FuzzyModel;
 import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPModel;
+import cz.muni.fi.kurcik.kgs.util.UrlIndex;
 import org.apache.commons.io.FileUtils;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Util class for saving clustering and cluster
@@ -26,11 +26,11 @@ public class ClusterSaver {
      * @param file      Path for saving data
      * @throws IOException when there is problem with file IO
      */
-    static public void saveClustering(HDPModel model, int[][] documents, Path file) throws IOException {
+    static public void saveClustering(FuzzyModel model, int[][] documents, Path file) throws IOException {
         try (PrintStream stream = new PrintStream(file.toFile())) {
             for (int docId = 0; docId < documents.length; docId++) {
                 int[] document = documents[docId];
-                double[] vector = model.clasifyDoc(document);
+                double[] vector = model.classifyDoc(document);
                 double max = 0;
                 for (int p = 0; p < vector.length; p++) {
                     if (vector[p] > max) {
@@ -51,14 +51,27 @@ public class ClusterSaver {
      * @param dir       Path for saving data
      * @throws IOException when there is problem with file IO
      */
-    static public void saveClusters(HDPModel model, int[][] documents, Path dir) throws IOException {
+    static public void saveClusters(FuzzyModel model, int[][] documents, Path dir) throws IOException {
+        saveClusters(model, documents, dir, null);
+    }
+
+    /**
+     * Saves document ids for each cluster into separate file .txt inside directory
+     *
+     * @param model     Clustering model
+     * @param documents matrix with word ids for all documents
+     * @param dir       Path for saving data
+     * @param urlIndex  Index for saving URL address with doc ids
+     * @throws IOException when there is problem with file IO
+     */
+    static public void saveClusters(FuzzyModel model, int[][] documents, Path dir, UrlIndex urlIndex) throws IOException {
         Map<Integer, Set<Long>> topicDocs = new HashMap<>();
         for (int i = 0; i < model.getTopics(); i++)
             topicDocs.put(i, new HashSet<>());
 
         for (int docId = 0; docId < documents.length; docId++) {
             int[] document = documents[docId];
-            double[] vector = model.clasifyDoc(document);
+            double[] vector = model.classifyDoc(document);
             double max = 0;
             int maxId = 0;
             for (int p = 0; p < vector.length; p++) {
@@ -72,7 +85,10 @@ public class ClusterSaver {
 
         for (Map.Entry<Integer, Set<Long>> entry : topicDocs.entrySet()) {
             Integer topic = entry.getKey();
-            Set<Long> docs = entry.getValue();
+            List<String> docs = entry.getValue().stream()
+                    .sorted(Long::compare)
+                    .map(it -> it.toString() + (urlIndex == null ? "" : " " + urlIndex.getUrl(it)))
+                    .collect(Collectors.toList());
             FileUtils.writeLines(dir.resolve(topic + ".txt").toFile(), docs);
         }
     }

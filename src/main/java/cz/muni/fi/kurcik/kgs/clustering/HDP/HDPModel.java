@@ -1,6 +1,8 @@
 package cz.muni.fi.kurcik.kgs.clustering.HDP;
 
 
+import cz.muni.fi.kurcik.kgs.clustering.FuzzyModel;
+
 import java.util.List;
 
 /**
@@ -8,7 +10,7 @@ import java.util.List;
  *
  * @author Lukáš Kurčík
  */
-public class HDPModel {
+public class HDPModel implements FuzzyModel {
     protected int topics = 0;
     protected int words = 0;
     protected List<int[]> topicToWordCounts;
@@ -35,7 +37,7 @@ public class HDPModel {
      * @param wordIds array of word ids
      * @return vector of probabilities for each topic
      */
-    public double[] clasifyDoc(int[] wordIds) {
+    public double[] classifyDoc(int[] wordIds) {
         double[] vector = new double[topics];
         for (int topic = 0; topic < topics; ++topic) {
             double probSum = 0;
@@ -55,7 +57,7 @@ public class HDPModel {
      * @return id of most probable topic
      */
     public int topicForDoc(int[] wordIds) {
-        double[] vector = clasifyDoc(wordCount);
+        double[] vector = classifyDoc(wordCount);
         int maxId = 0;
         double max = vector[0];
         for (int i = 0; i < vector.length; ++i) {

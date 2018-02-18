@@ -1,7 +1,9 @@
 package cz.muni.fi.kurcik.kgs.preprocessing;
 
 import com.drew.lang.Charsets;
-import cz.muni.fi.kurcik.kgs.clustering.Corpus;
+import cz.muni.fi.kurcik.kgs.clustering.corpus.BasicCorpus;
+import cz.muni.fi.kurcik.kgs.clustering.corpus.Corpus;
+import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
 import cz.muni.fi.kurcik.kgs.download.Downloader;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -97,16 +99,18 @@ public class MajkaPreprocessor implements Preprocessor {
      * @throws IOException when there is problem with file IO
      */
     @Override
-    public void prepareClusteringFiles() throws IOException {
+    public void prepareClusteringFiles(Corpus corpus) throws IOException {
         logger.log(Level.INFO, "Preparing clustering files.");
         createCorpusFolder();
-        Corpus corpus = new Corpus();
 
         Path processedDir = downloadDir.resolve(NORMALIZED_FILES_DIR);
         File[] parsedFiles = processedDir.toFile().listFiles((File dir, String name) -> name.endsWith(Downloader.PARSED_EXTENSION));
         Arrays.sort(parsedFiles, Comparator.comparingInt(a -> Integer.parseInt(FilenameUtils.removeExtension(a.getName()))));
 
-        for (File f: parsedFiles) {
+        if (corpus instanceof PruningCorpus)
+            ((PruningCorpus) corpus).setDocCount(parsedFiles.length);
+
+        for (File f : parsedFiles) {
             String[] words = FileUtils.readLines(f, Charsets.UTF_8).get(0).split("\\s+");
             corpus.addDocument(words);
         }
@@ -129,6 +133,7 @@ public class MajkaPreprocessor implements Preprocessor {
 
     /**
      * Creates temp dir with files for using majka script. Dir needs to be deleted after using
+     *
      * @return Path to file
      * @throws IOException
      */
