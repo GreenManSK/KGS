@@ -1,27 +1,27 @@
 package cz.muni.fi.kurcik.kgs.preprocessing;
 
 import com.drew.lang.Charsets;
-import cz.muni.fi.kurcik.kgs.clustering.corpus.BasicCorpus;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.Corpus;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
 import cz.muni.fi.kurcik.kgs.download.Downloader;
+import cz.muni.fi.kurcik.kgs.util.Majka;
+import edu.stanford.nlp.ling.CoreAnnotations;
+import edu.stanford.nlp.ling.CoreLabel;
+import edu.stanford.nlp.pipeline.Annotation;
+import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
-import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
-import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CORPUS_FILE;
-import static cz.muni.fi.kurcik.kgs.clustering.Clustering.VOCAB_FILE;
+import static cz.muni.fi.kurcik.kgs.clustering.Clustering.*;
 
 /**
  * Preprocessor implementation using Majka
@@ -30,9 +30,7 @@ import static cz.muni.fi.kurcik.kgs.clustering.Clustering.VOCAB_FILE;
  */
 public class MajkaPreprocessor implements Preprocessor {
 
-    private static final String MAJKA_RESOURCE_DIR = "majka";
-    private static final List<String> MAJKA_RESOURCES = Arrays.asList("majka", "majka.w-lt", "preprocess.sh", "stop_words.sed");
-    private static final String MAJKA_SCRIPT = "preprocess.sh";
+   private static final String STOP_WORDS_FILE = "majka/stop_words.txt";
 
     private final Logger logger;
 
@@ -67,27 +65,61 @@ public class MajkaPreprocessor implements Preprocessor {
         Path parsedDir = downloadDir.resolve(Downloader.PARSED_FILES_DIR);
         Path processedDir = downloadDir.resolve(NORMALIZED_FILES_DIR);
 
-        Path scriptDir = createTempScript();
-
+        Set<String> stopWords = loadStopWords();
         File[] parsedFiles = parsedDir.toFile().listFiles((File dir, String name) -> name.endsWith(Downloader.PARSED_EXTENSION));
-        String commandBase = getCommandBase(scriptDir);
+        Majka majka = new Majka();
         for (File parsed : parsedFiles) {
-            String cmd =
-                    commandBase + " " +
-                            parsed.getPath() + " " +
-                            processedDir.resolve(parsed.getName()).toString();
-            try {
-                Process process = Runtime.getRuntime().exec(cmd);
-                process.waitFor();
-                if (process.exitValue() != 0) {
-                    logger.log(Level.WARNING, "Could not process " + parsed);
-                }
-            } catch (InterruptedException e) {
-                logger.log(Level.WARNING, "Error while processing " + parsed, e);
+            Path result = processedDir.resolve(parsed.getName());
+            String content = FileUtils.readFileToString(parsed, Charsets.UTF_8);
+            List<String> tokens = tokenize(content);
+            tokens = tokens.stream().filter(token -> !stopWords.contains(token.toLowerCase())).collect(Collectors.toList());
+
+            Map<String, String> lemmas = majka.findAll(tokens, Majka.IGNORE_CASE, false);
+            FileUtils.writeLines(result.toFile(), tokens.stream().map(lemmas::get).collect(Collectors.toList()), " ");
+        }
+
+        logger.log(Level.INFO, "Normalization finished");
+    }
+
+    /**
+     * Tokenize string
+     *
+     * @param content Content of file
+     * @return List of word tokens
+     */
+    protected List<String> tokenize(String content) {
+        Properties props = new Properties();
+        props.put("annotators", "tokenize");
+        StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
+        Annotation document = new Annotation(content);
+        pipeline.annotate(document);
+        List<CoreLabel> labels = document.get(CoreAnnotations.TokensAnnotation.class);
+        List<String> result = new ArrayList<>();
+        for (CoreLabel l : labels) {
+            if (!l.toString().matches("^\\W+$")) {
+                result.add(l.toString());
             }
         }
-        FileUtils.deleteDirectory(scriptDir.toFile());
-        logger.log(Level.INFO, "Normalization finished");
+        return result;
+    }
+
+    /**
+     * Load list of stopwords
+     *
+     * @return HashSet of stopwords
+     * @throws IOException when there is problem with file IO
+     */
+    protected Set<String> loadStopWords() throws IOException {
+        Set<String> stopWords = new HashSet<>();
+        try (InputStream inputStream = MajkaPreprocessor.class.getClassLoader().getResourceAsStream(STOP_WORDS_FILE);
+             InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+             BufferedReader bufferedReader = new BufferedReader(inputStreamReader)) {
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                stopWords.add(line);
+            }
+        }
+        return stopWords;
     }
 
     /**
@@ -118,41 +150,6 @@ public class MajkaPreprocessor implements Preprocessor {
         corpus.save(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CORPUS_FILE));
         corpus.getVocabulary().save(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(VOCAB_FILE));
         logger.log(Level.INFO, "Finished preparing clustering files.");
-    }
-
-    /**
-     * Return command base form Majka preprocess script
-     * It should be used with path to parsed file and path where preprocessed file should be saved
-     *
-     * @param scriptDir Directory with all files for using majka
-     * @return ./pathToScript
-     */
-    protected String getCommandBase(Path scriptDir) {
-        return "./" + scriptDir.resolve(MAJKA_SCRIPT).toAbsolutePath().toString();
-    }
-
-    /**
-     * Creates temp dir with files for using majka script. Dir needs to be deleted after using
-     *
-     * @return Path to file
-     * @throws IOException
-     */
-    protected Path createTempScript() throws IOException {
-        Path tempDir = null;
-        try {
-            tempDir = Files.createTempDirectory(this.downloadDir, null);
-            for (String file : MAJKA_RESOURCES) {
-                try (InputStream input = MajkaPreprocessor.class.getClassLoader().getResourceAsStream(MAJKA_RESOURCE_DIR + "/" + file)) {
-                    Files.copy(input, tempDir.resolve(file));
-                }
-            }
-            return tempDir;
-        } catch (IOException e) {
-            if (tempDir != null)
-                FileUtils.deleteDirectory(tempDir.toFile());
-            logger.log(Level.WARNING, "Couldn't create temp directory for preprocessor script", e);
-            throw e;
-        }
     }
 
     /**
