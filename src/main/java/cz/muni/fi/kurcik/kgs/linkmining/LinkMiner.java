@@ -2,6 +2,7 @@ package cz.muni.fi.kurcik.kgs.linkmining;
 
 import cz.muni.fi.kurcik.kgs.clustering.DistanceModel;
 import cz.muni.fi.kurcik.kgs.linkmining.ranking.Ranking;
+import cz.muni.fi.kurcik.kgs.util.Module;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -12,7 +13,7 @@ import java.nio.file.Path;
  *
  * @author Lukáš Kurčík
  */
-public interface LinkMiner {
+public interface LinkMiner extends Module {
 
     String LINKMINING_DIR = "linkmining";
 

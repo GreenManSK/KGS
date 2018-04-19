@@ -1,5 +1,7 @@
 package cz.muni.fi.kurcik.kgs.clustering;
 
+import cz.muni.fi.kurcik.kgs.util.Module;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -7,7 +9,7 @@ import java.nio.file.Path;
  * Interface to cluster data from preprocessing
  * @author Lukáš Kurčík
  */
-public interface Clustering {
+public interface Clustering extends Module {
     String CLUSTERING_FILES_DIR = "clustering";
     String VOCAB_FILE = "vocab.txt";
     String CORPUS_FILE = "corpus.dat";

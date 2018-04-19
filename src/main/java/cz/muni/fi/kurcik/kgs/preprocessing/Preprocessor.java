@@ -1,6 +1,7 @@
 package cz.muni.fi.kurcik.kgs.preprocessing;
 
 import cz.muni.fi.kurcik.kgs.clustering.corpus.Corpus;
+import cz.muni.fi.kurcik.kgs.util.Module;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -12,7 +13,7 @@ import java.nio.file.Path;
  *
  * @author Lukáš Kurčík
  */
-public interface Preprocessor {
+public interface Preprocessor extends Module {
 
     String NORMALIZED_FILES_DIR = "normalized";
     String NORMALIZED_FILE_EXTENSION = ".txt";

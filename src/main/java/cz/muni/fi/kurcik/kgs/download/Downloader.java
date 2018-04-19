@@ -1,5 +1,7 @@
 package cz.muni.fi.kurcik.kgs.download;
 
+import cz.muni.fi.kurcik.kgs.util.Module;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
@@ -9,7 +11,7 @@ import java.nio.file.Path;
  *
  * @author Lukáš Kurčík
  */
-public interface Downloader {
+public interface Downloader extends Module {
     String ORIGINAL_FILES_DIR = "original";
     String PARSED_FILES_DIR = "parsed";
     String PARSED_EXTENSION = ".txt";
