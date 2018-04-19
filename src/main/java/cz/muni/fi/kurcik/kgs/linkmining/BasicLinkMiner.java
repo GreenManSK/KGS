@@ -7,8 +7,10 @@ import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPClusteringModel;
 import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPModel;
 import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPModelBuilder;
 import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
+import cz.muni.fi.kurcik.kgs.clustering.util.ClusterLoader;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
 import cz.muni.fi.kurcik.kgs.download.Downloader;
+import cz.muni.fi.kurcik.kgs.linkmining.Mapper.LinkMapper;
 import cz.muni.fi.kurcik.kgs.linkmining.ranking.Ranking;
 import cz.muni.fi.kurcik.kgs.util.AModule;
 import cz.muni.fi.kurcik.kgs.util.MaxIndex;
@@ -21,7 +23,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -38,11 +39,11 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
 
     protected UrlIndex urlIndex;
 
-    protected Map<Long, List<String>> links;
-    protected Map<Long, Integer> inLinks;
-    protected Map<Long, Integer> outLinks;
+    protected Map<Integer, List<String>> links;
+    protected Map<Integer, Integer> inLinks;
+    protected Map<Integer, Integer> outLinks;
 
-    protected List<Long> docToCluster;
+    protected List<Integer> docToCluster;
     protected int clusters;
 
     /**
@@ -68,21 +69,21 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
     @Override
     public void recompute(DistanceModel distanceModel, Ranking ranking, LinkMiningStrategy strategy) throws IOException {
         getLogger().info("Starting link mining");
-        loadUrlIndex();
-        loadLinks();
-        loadClusters();
+
+        loadLinkInfo();
+        loadClusterInfo();
 
         getLogger().info("Recalculating clustering based on links");
         rankingMap = new double[docToCluster.size()][clusters];
         List<String> docLinks;
 
         for (int doc = 0; doc < docToCluster.size(); doc++) {
-            int docCluster = docToCluster.get(doc).intValue();
+            int docCluster = docToCluster.get(doc);
 
             rankingMap[doc][docCluster] = ranking.clusterRank();
-            long in = inLinks.get(doc + 1L);
-            long out = outLinks.get(doc + 1L);
-            docLinks = links.get(doc + 1L);
+            long in = inLinks.get(doc + 1);
+            long out = outLinks.get(doc + 1);
+            docLinks = links.get(doc + 1);
 
             for (String link : docLinks) {
                 Long id = urlIndex.getId(link);
@@ -188,95 +189,25 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
     }
 
     /**
-     * Loads information about document clustering
-     *
+     * Loads information about links
      * @throws IOException when there is problem with file IO
      */
-    protected void loadClusters() throws IOException {
-        getLogger().info("Loading clustering");
-        List<String> lines = FileUtils.readLines(downloadDir.resolve(Clustering.CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE).toFile(), Charsets.UTF_8);
-        clusters = lines.get(0).split(" ").length;
-        docToCluster = new ArrayList<>(lines.size());
-        lines.forEach(line -> {
-            double[] probs = Arrays.stream(line.split(" ")).mapToDouble(Double::parseDouble).toArray();
-            double max = 0;
-            long index = 0;
-            for (int i = 0; i < probs.length; ++i)
-                if (max < probs[i]) {
-                    max = probs[i];
-                    index = i;
-                }
-            docToCluster.add(index);
-        });
+    protected void loadLinkInfo() throws IOException {
+        LinkMapper linkMapper = new LinkMapper(downloadDir, getLogger());
+
+        inLinks = linkMapper.getInLinks();
+        outLinks = linkMapper.getOutLinks();
+        links = linkMapper.getLinks();
+        urlIndex = linkMapper.getUrlIndex();
     }
 
     /**
-     * Compute number of outgoing and ingoing links for each url and load list of outgoing links.
-     *
+     * Load clustering info
      * @throws IOException when there is problem with file IO
      */
-    protected void loadLinks() throws IOException {
-        getLogger().info("Loading link info");
-        links = new HashMap<>();
-        inLinks = new HashMap<>();
-        outLinks = new HashMap<>();
-
-        File[] linkFiles = downloadDir.resolve(Downloader.LINKS_FILES_DIR).toFile().listFiles((File dir, String name) -> name.endsWith(Downloader.LINKS_EXTENSION));
-        if (linkFiles == null) {
-            IOException e = new IOException("Problem while loading clustering");
-            getLogger().log(Level.SEVERE, e.getMessage(), e);
-            throw e;
-        }
-        List<String> links;
-        for (File file : linkFiles) {
-            links = FileUtils.readLines(file, Charsets.UTF_8);
-            Long fileId = Long.parseLong(FilenameUtils.getBaseName(file.toString()));
-
-            this.links.put(fileId, links);
-            outLinks.put(fileId, links.size());
-            inLinks.putIfAbsent(fileId, 0);
-
-            for (String link : links) {
-                Long inId = urlIndex.getId(link);
-                Integer newIn = inLinks.get(inId);
-                newIn = newIn == null ? 1 : newIn + 1;
-                inLinks.put(inId, newIn);
-            }
-        }
-    }
-
-    /**
-     * Loads url index
-     *
-     * @throws IOException when there is problem with file IO
-     */
-    protected void loadUrlIndex() throws IOException {
-        try {
-            getLogger().info("Loading URL index");
-            urlIndex = new UrlIndex(downloadDir.resolve("ids.txt"));
-        } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "Error while reading ids from file", e);
-            throw e;
-        }
-    }
-
-    /**
-     * Returns path to folder with downloaded data
-     *
-     * @return directory to download folder
-     */
-    @Override
-    public Path getDownloadDirectory() {
-        return downloadDir;
-    }
-
-    /**
-     * Sets download directory for downloader. All data will be put into dirName/url
-     *
-     * @param dir Directory to download folder
-     */
-    @Override
-    public void setDownloadDirectory(Path dir) {
-        downloadDir = dir;
+    protected void loadClusterInfo() throws IOException {
+        ClusterLoader clusterLoader = new ClusterLoader(downloadDir, getLogger());
+        clusters = clusterLoader.getClusters();
+        docToCluster = clusterLoader.getDocToCluster();
     }
 }

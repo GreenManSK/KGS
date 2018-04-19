@@ -117,5 +117,29 @@
             <artifactId>slf4j-nop</artifactId>
             <version>1.7.5</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.Neuw84</groupId>
+            <artifactId>RAKE-Java</artifactId>
+            <version>-SNAPSHOT</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-core</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+
+        <!-- Textrank -->
+        <dependency>
+            <groupId>commons-math</groupId>
+            <artifactId>commons-math</artifactId>
+            <version>1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.GreenManSK</groupId>
+            <artifactId>textrank</artifactId>
+            <version>0861d5a0c5</version>
+        </dependency>
     </dependencies>
 </project>
