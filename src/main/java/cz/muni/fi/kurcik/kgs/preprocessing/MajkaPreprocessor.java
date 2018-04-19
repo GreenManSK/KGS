@@ -30,7 +30,7 @@ import static cz.muni.fi.kurcik.kgs.clustering.Clustering.*;
  */
 public class MajkaPreprocessor implements Preprocessor {
 
-   private static final String STOP_WORDS_FILE = "majka/stop_words.txt";
+    protected static final String STOP_WORDS_FILE = "majka/stop_words.txt";
 
     private final Logger logger;
 

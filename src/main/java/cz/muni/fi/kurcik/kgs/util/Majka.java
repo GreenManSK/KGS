@@ -31,6 +31,8 @@ public class Majka {
     protected static final String TAGS_REGEX = ":.*$";
     protected static final String DICTIONARY_FILE = "majka/majka.w-lt";
 
+    protected final HashMap<String, String> cache = new HashMap<>(); // Saves results of older calls to speed up processing
+
     /**
      * Return all lemmas with tags for word.
      *
@@ -94,13 +96,23 @@ public class Majka {
     public Map<String, String> findAll(List<String> words, int flags, boolean tags) throws IOException {
         Path dic = unpackDictionary();
 
-        String[] wordsArray;
-        wordsArray = (new HashSet<>(words)).toArray(new String[0]); // For better performance use only unique words
-
-        String[] output = findAll(dic.toString(), wordsArray, wordsArray.length, flags);
         Map<String, String> result = new HashMap<>();
-        for (int i = 0; i < wordsArray.length; i++) {
-            result.put(wordsArray[i], tags ? output[i] : output[i].replaceFirst(TAGS_REGEX, ""));
+        HashSet<String> majkuj = new HashSet<>();
+        words.forEach(word -> {
+            if (cache.containsKey(word))
+                result.put(word, tags ? cache.get(word) : cache.get(word).replaceFirst(TAGS_REGEX, ""));
+            else
+                majkuj.add(word);
+        });
+
+        String[] wordsArray = majkuj.toArray(new String[0]);
+
+        if (wordsArray.length > 0) {
+            String[] output = findAll(dic.toString(), wordsArray, wordsArray.length, flags);
+            for (int i = 0; i < wordsArray.length; i++) {
+                cache.put(wordsArray[i], output[i]);
+                result.put(wordsArray[i], tags ? output[i] : output[i].replaceFirst(TAGS_REGEX, ""));
+            }
         }
         Files.delete(dic);
 
@@ -125,5 +137,18 @@ public class Majka {
             logger.log(Level.SEVERE, "Error while creating dictionary for Majka", e);
             throw e;
         }
+    }
+
+    /**
+     * Removes tag from lemma
+     * @param lemma lemma:tag
+     * @return lemma
+     */
+    public String removeTag(String lemma) {
+        return lemma.replaceFirst(TAGS_REGEX, "");
+    }
+
+    public HashMap<String, String> getCache() {
+        return cache;
     }
 }
