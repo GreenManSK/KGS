@@ -31,6 +31,7 @@ import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
 /**
  * Basic link miner based on original link miner from Kiwi
  *
+ * @todo: Repair implementation
  * @author Lukáš Kurčík
  */
 public class BasicLinkMiner implements LinkMiner {
