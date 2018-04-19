@@ -31,18 +31,4 @@ public interface Downloader {
      * @throws IOException when there is problem with downloading
      */
     void downloadPage(URI url, int hops, int depth) throws IOException;
-
-    /**
-     * Sets download directory for downloader. All data will be put into dirName/url
-     *
-     * @param dir Directory to download folder
-     */
-    void setDownloadDirectory(Path dir);
-
-    /**
-     * Returns path to folder with downloaded data
-     *
-     * @return directory to download folder
-     */
-    Path getDownloadDirectory();
 }

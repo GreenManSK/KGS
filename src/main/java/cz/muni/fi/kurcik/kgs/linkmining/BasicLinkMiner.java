@@ -10,6 +10,7 @@ import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
 import cz.muni.fi.kurcik.kgs.download.Downloader;
 import cz.muni.fi.kurcik.kgs.linkmining.ranking.Ranking;
+import cz.muni.fi.kurcik.kgs.util.AModule;
 import cz.muni.fi.kurcik.kgs.util.MaxIndex;
 import cz.muni.fi.kurcik.kgs.util.UrlIndex;
 import de.uni_leipzig.informatik.asv.utils.CLDACorpus;
@@ -23,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILE;
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
@@ -34,11 +34,7 @@ import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
  * @todo: Repair implementation
  * @author Lukáš Kurčík
  */
-public class BasicLinkMiner implements LinkMiner {
-
-    private final Logger logger;
-
-    protected Path downloadDir;
+public class BasicLinkMiner extends AModule implements LinkMiner {
 
     protected UrlIndex urlIndex;
 
@@ -58,16 +54,6 @@ public class BasicLinkMiner implements LinkMiner {
      * Create new link miner
      */
     public BasicLinkMiner() {
-        this(Logger.getLogger(BasicLinkMiner.class.getName()));
-    }
-
-    /**
-     * Create new link miner
-     *
-     * @param logger Logger for information about processing
-     */
-    public BasicLinkMiner(Logger logger) {
-        this.logger = logger;
     }
 
     /**
@@ -81,12 +67,12 @@ public class BasicLinkMiner implements LinkMiner {
      */
     @Override
     public void recompute(DistanceModel distanceModel, Ranking ranking, LinkMiningStrategy strategy) throws IOException {
-        logger.info("Starting link mining");
+        getLogger().info("Starting link mining");
         loadUrlIndex();
         loadLinks();
         loadClusters();
 
-        logger.info("Recalculating clustering based on links");
+        getLogger().info("Recalculating clustering based on links");
         rankingMap = new double[docToCluster.size()][clusters];
         List<String> docLinks;
 
@@ -112,17 +98,17 @@ public class BasicLinkMiner implements LinkMiner {
             }
         }
 
-        logger.info("Building new HDP model");
+        getLogger().info("Building new HDP model");
         CLDACorpus corpus = getCorpus();
         HDPModel model = createHDPModel(rankingMap, corpus);
 
-        logger.info("Saving clustering after link mining");
+        getLogger().info("Saving clustering after link mining");
         saveClusters(model, corpus);
 
-        logger.info("Computing index of clustering");
+        getLogger().info("Computing index of clustering");
         computeClusteringIndex();
 
-        logger.info("Link mining finished");
+        getLogger().info("Link mining finished");
     }
 
 
@@ -136,10 +122,10 @@ public class BasicLinkMiner implements LinkMiner {
             HDPClusteringModel modelOld = new HDPClusteringModel(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
             HDPClusteringModel modelNew = new HDPClusteringModel(downloadDir.resolve(LINKMINING_DIR).resolve(CLUSTERING_FILE));
             GradedDistanceIndex gdi = new GradedDistanceIndex();
-            logger.info("GD_index before link mining: " + gdi.compute(modelOld));
-            logger.info("GD_index after link mining: " + gdi.compute(modelNew));
+            getLogger().info("GD_index before link mining: " + gdi.compute(modelOld));
+            getLogger().info("GD_index after link mining: " + gdi.compute(modelNew));
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error while loading clusters", e);
+            getLogger().log(Level.SEVERE, "Error while loading clusters", e);
             throw e;
         }
     }
@@ -156,12 +142,12 @@ public class BasicLinkMiner implements LinkMiner {
             Files.createDirectories(downloadDir.resolve(LINKMINING_DIR));
 
             int[][] documents = corpus.getDocuments();
-            logger.info("Saving clustering probabilities");
+            getLogger().info("Saving clustering probabilities");
             ClusterSaver.saveClustering(model, documents, downloadDir.resolve(LINKMINING_DIR).resolve(CLUSTERING_FILE));
-            logger.info("Saving clusters into files");
+            getLogger().info("Saving clusters into files");
             ClusterSaver.saveClusters(model, documents, downloadDir.resolve(LINKMINING_DIR));
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error while saving clusters", e);
+            getLogger().log(Level.SEVERE, "Error while saving clusters", e);
             throw e;
         }
     }
@@ -196,7 +182,7 @@ public class BasicLinkMiner implements LinkMiner {
         try (FileInputStream fileInputStream = new FileInputStream(downloadDir.resolve(Clustering.CLUSTERING_FILES_DIR).resolve(Clustering.CORPUS_FILE).toFile())) {
             return new CLDACorpus(fileInputStream);
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error while getting document corpus", e);
+            getLogger().log(Level.SEVERE, "Error while getting document corpus", e);
             throw e;
         }
     }
@@ -207,7 +193,7 @@ public class BasicLinkMiner implements LinkMiner {
      * @throws IOException when there is problem with file IO
      */
     protected void loadClusters() throws IOException {
-        logger.info("Loading clustering");
+        getLogger().info("Loading clustering");
         List<String> lines = FileUtils.readLines(downloadDir.resolve(Clustering.CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE).toFile(), Charsets.UTF_8);
         clusters = lines.get(0).split(" ").length;
         docToCluster = new ArrayList<>(lines.size());
@@ -230,7 +216,7 @@ public class BasicLinkMiner implements LinkMiner {
      * @throws IOException when there is problem with file IO
      */
     protected void loadLinks() throws IOException {
-        logger.info("Loading link info");
+        getLogger().info("Loading link info");
         links = new HashMap<>();
         inLinks = new HashMap<>();
         outLinks = new HashMap<>();
@@ -238,7 +224,7 @@ public class BasicLinkMiner implements LinkMiner {
         File[] linkFiles = downloadDir.resolve(Downloader.LINKS_FILES_DIR).toFile().listFiles((File dir, String name) -> name.endsWith(Downloader.LINKS_EXTENSION));
         if (linkFiles == null) {
             IOException e = new IOException("Problem while loading clustering");
-            logger.log(Level.SEVERE, e.getMessage(), e);
+            getLogger().log(Level.SEVERE, e.getMessage(), e);
             throw e;
         }
         List<String> links;
@@ -266,10 +252,10 @@ public class BasicLinkMiner implements LinkMiner {
      */
     protected void loadUrlIndex() throws IOException {
         try {
-            logger.info("Loading URL index");
+            getLogger().info("Loading URL index");
             urlIndex = new UrlIndex(downloadDir.resolve("ids.txt"));
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Error while reading ids from file", e);
+            getLogger().log(Level.SEVERE, "Error while reading ids from file", e);
             throw e;
         }
     }

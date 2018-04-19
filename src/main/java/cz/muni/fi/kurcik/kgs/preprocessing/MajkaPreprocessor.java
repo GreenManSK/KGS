@@ -4,6 +4,7 @@ import com.drew.lang.Charsets;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.Corpus;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
 import cz.muni.fi.kurcik.kgs.download.Downloader;
+import cz.muni.fi.kurcik.kgs.util.AModule;
 import cz.muni.fi.kurcik.kgs.util.Majka;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
@@ -13,12 +14,10 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.*;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.*;
@@ -28,11 +27,9 @@ import static cz.muni.fi.kurcik.kgs.clustering.Clustering.*;
  *
  * @author Lukáš Kurčík
  */
-public class MajkaPreprocessor implements Preprocessor {
+public class MajkaPreprocessor extends AModule implements Preprocessor {
 
     protected static final String STOP_WORDS_FILE = "majka/stop_words.txt";
-
-    private final Logger logger;
 
     protected Path downloadDir;
 
@@ -40,16 +37,6 @@ public class MajkaPreprocessor implements Preprocessor {
      * Create new majka preprocessor
      */
     public MajkaPreprocessor() {
-        this(Logger.getLogger(MajkaPreprocessor.class.getName()));
-    }
-
-    /**
-     * Create new majka preprocessor
-     *
-     * @param logger Logger for information about processing
-     */
-    public MajkaPreprocessor(Logger logger) {
-        this.logger = logger;
     }
 
     /**
@@ -59,7 +46,7 @@ public class MajkaPreprocessor implements Preprocessor {
      */
     @Override
     public void normalizeParsedFiles() throws IOException {
-        logger.log(Level.INFO, "Normalizing parsed files");
+        getLogger().log(Level.INFO, "Normalizing parsed files");
         createProcessedFolder();
 
         Path parsedDir = downloadDir.resolve(Downloader.PARSED_FILES_DIR);
@@ -78,7 +65,7 @@ public class MajkaPreprocessor implements Preprocessor {
             FileUtils.writeLines(result.toFile(), tokens.stream().map(lemmas::get).collect(Collectors.toList()), " ");
         }
 
-        logger.log(Level.INFO, "Normalization finished");
+        getLogger().log(Level.INFO, "Normalization finished");
     }
 
     /**
@@ -132,7 +119,7 @@ public class MajkaPreprocessor implements Preprocessor {
      */
     @Override
     public void prepareClusteringFiles(Corpus corpus) throws IOException {
-        logger.log(Level.INFO, "Preparing clustering files.");
+        getLogger().log(Level.INFO, "Preparing clustering files.");
         createCorpusFolder();
 
         Path processedDir = downloadDir.resolve(NORMALIZED_FILES_DIR);
@@ -149,7 +136,7 @@ public class MajkaPreprocessor implements Preprocessor {
 
         corpus.save(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CORPUS_FILE));
         corpus.getVocabulary().save(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(VOCAB_FILE));
-        logger.log(Level.INFO, "Finished preparing clustering files.");
+        getLogger().log(Level.INFO, "Finished preparing clustering files.");
     }
 
     /**
@@ -161,7 +148,7 @@ public class MajkaPreprocessor implements Preprocessor {
         try {
             Files.createDirectories(downloadDir.resolve(NORMALIZED_FILES_DIR));
         } catch (IOException e) {
-            logger.severe("Couldn't create folder '" + downloadDir.resolve(NORMALIZED_FILES_DIR).toAbsolutePath().toString() + "' for downloading");
+            getLogger().severe("Couldn't create folder '" + downloadDir.resolve(NORMALIZED_FILES_DIR).toAbsolutePath().toString() + "' for downloading");
             throw e;
         }
     }
@@ -175,7 +162,7 @@ public class MajkaPreprocessor implements Preprocessor {
         try {
             Files.createDirectories(downloadDir.resolve(CLUSTERING_FILES_DIR));
         } catch (IOException e) {
-            logger.severe("Couldn't create folder '" + downloadDir.resolve(CLUSTERING_FILES_DIR).toAbsolutePath().toString() + "' for downloading");
+            getLogger().severe("Couldn't create folder '" + downloadDir.resolve(CLUSTERING_FILES_DIR).toAbsolutePath().toString() + "' for downloading");
             throw e;
         }
     }

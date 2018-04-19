@@ -22,18 +22,4 @@ public interface Clustering {
      * @throws IOException when there is problem with file IO
      */
     void cluster() throws IOException;
-
-    /**
-     * Sets download directory for downloader. All data will be put into dirName/url
-     *
-     * @param dir Directory to download folder
-     */
-    void setDownloadDirectory(Path dir);
-
-    /**
-     * Returns path to folder with downloaded data
-     *
-     * @return directory to download folder
-     */
-    Path getDownloadDirectory();
 }
