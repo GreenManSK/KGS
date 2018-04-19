@@ -64,7 +64,7 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
         getLogger().info("Starting keywords generation");
         createKeywordsFolder();
 
-//        generateDocumentKeywords();
+        generateDocumentKeywords();
         generateClusterKeywords(keywordsForCluster);
     }
 
