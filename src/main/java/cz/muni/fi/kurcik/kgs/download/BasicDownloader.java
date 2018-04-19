@@ -181,7 +181,10 @@ public class BasicDownloader implements Downloader {
      */
     protected String getMime(URI url) {
         try {
-            return url.toURL().openConnection().getContentType();
+            String mime = url.toURL().openConnection().getContentType();
+            if (mime != null && mime.contains(";"))
+                mime = mime.replaceAll(";.*$", "");
+            return mime;
         } catch (IOException e) {
             logger.log(Level.WARNING, url.toString(), e);
         }
