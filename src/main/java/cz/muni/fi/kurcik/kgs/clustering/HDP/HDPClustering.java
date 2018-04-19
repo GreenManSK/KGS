@@ -54,8 +54,7 @@ public class HDPClustering implements Clustering {
         logger.info("Starting clustering");
         try (FileInputStream fileInputStream = new FileInputStream(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CORPUS_FILE).toFile())) {
             HDPGibbsSampler2 hdp = new HDPGibbsSampler2();
-            hdp.alpha = 4.0;
-            hdp.beta = 2.0;
+
             logger.info("Preparing corpus");
             CLDACorpus corpus = new CLDACorpus(fileInputStream);
 
