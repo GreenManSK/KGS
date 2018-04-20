@@ -100,6 +100,10 @@ public class UrlIndex {
      */
     public void add(long id, URI url) {
         url = normalize(url);
+        if (urlToId.containsKey(url) ||
+                urlToId.containsKey(UriBuilder.fromUri(url).scheme(url.getScheme().equals("http") ? "https" : "http").build())) {
+            return;
+        }
         urlToId.put(url, id);
         idToUrl.put(id, url);
     }
