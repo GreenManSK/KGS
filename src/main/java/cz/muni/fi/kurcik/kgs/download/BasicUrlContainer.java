@@ -184,14 +184,13 @@ public class BasicUrlContainer implements UrlContainer {
      * @return uri without fragment
      */
     protected URI normalizeUrl(URI uri) {
-        if (uri.getFragment() == null)
-            return uri;
         try {
             String path;
             if (uri.getPath() != null && uri.getPath().endsWith("/"))
                 path = uri.getPath().replaceAll("/$", "");
             else
                 path = uri.getPath();
+            System.out.println("norm");
             return new URI("http", uri.getAuthority(), path, uri.getQuery());
         } catch (URISyntaxException e) {
             logger.warning("Couldn't normalize url " + uri + ": " + e.getMessage());
