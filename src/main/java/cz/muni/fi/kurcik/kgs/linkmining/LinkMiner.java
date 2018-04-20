@@ -21,7 +21,6 @@ public interface LinkMiner extends Module {
      * Recomputes actual clustering based on number of ingoing and outgoing links.
      * Compares new clustering with old and saves new clustering in the same way as Clustering implementations
      * Saves all url-cluster pairs into Clustering::URL_CLUSTER_FILE
-     * @todo: Saves all url-cluster pairs into URL_CLUSTER_FILE
      *
      * @param distanceModel Distance model
      * @param ranking Ranking function used in computing

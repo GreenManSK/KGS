@@ -20,6 +20,7 @@ public interface Clustering extends Module {
      * Takes prerocessed data from CLUSTERING_FILES_DIR and makes clusters from them.
      * Saves list of topic probabilities for each document into file and each cluster into separate file
      * Saves all url-cluster pairs into URL_CLUSTER_FILE
+     * @todo: New clustering format
      * @todo: Saves all url-cluster pairs into URL_CLUSTER_FILE
      * @throws IOException when there is problem with file IO
      */

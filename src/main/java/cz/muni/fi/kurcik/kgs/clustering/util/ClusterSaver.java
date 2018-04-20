@@ -65,9 +65,9 @@ public class ClusterSaver {
      * @throws IOException when there is problem with file IO
      */
     static public void saveClusters(FuzzyModel model, int[][] documents, Path dir, UrlIndex urlIndex) throws IOException {
-        Map<Integer, Set<Long>> topicDocs = new HashMap<>();
+        Map<Integer, List<Long>> topicDocs = new HashMap<>();
         for (int i = 0; i < model.getTopics(); i++)
-            topicDocs.put(i, new HashSet<>());
+            topicDocs.put(i, new ArrayList<>());
 
         for (int docId = 0; docId < documents.length; docId++) {
             int[] document = documents[docId];
@@ -83,7 +83,19 @@ public class ClusterSaver {
             topicDocs.get(maxId).add((long) docId + 1);
         }
 
-        for (Map.Entry<Integer, Set<Long>> entry : topicDocs.entrySet()) {
+        saveClusters(topicDocs, dir, urlIndex);
+    }
+
+    /**
+     * Saves document ids for each cluster into separate file .txt inside directory
+     *
+     * @param clusterDocuments Map with list of all document IDs for each cluster
+     * @param dir              Path for saving data
+     * @param urlIndex         Index for saving URL address with doc ids
+     * @throws IOException when there is problem with file IO
+     */
+    static public void saveClusters(Map<Integer, List<Long>> clusterDocuments, Path dir, UrlIndex urlIndex) throws IOException {
+        for (Map.Entry<Integer, List<Long>> entry : clusterDocuments.entrySet()) {
             Integer topic = entry.getKey();
             List<String> docs = entry.getValue().stream()
                     .sorted(Long::compare)

@@ -1,6 +1,5 @@
 package cz.muni.fi.kurcik.kgs.linkmining;
 
-import com.drew.lang.Charsets;
 import cz.muni.fi.kurcik.kgs.clustering.Clustering;
 import cz.muni.fi.kurcik.kgs.clustering.DistanceModel;
 import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPClusteringModel;
@@ -9,15 +8,14 @@ import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPModelBuilder;
 import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterLoader;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
-import cz.muni.fi.kurcik.kgs.download.Downloader;
 import cz.muni.fi.kurcik.kgs.linkmining.Mapper.LinkMapper;
 import cz.muni.fi.kurcik.kgs.linkmining.ranking.Ranking;
+import cz.muni.fi.kurcik.kgs.linkmining.util.LinkMiningModel;
 import cz.muni.fi.kurcik.kgs.util.AModule;
 import cz.muni.fi.kurcik.kgs.util.MaxIndex;
 import cz.muni.fi.kurcik.kgs.util.UrlIndex;
 import de.uni_leipzig.informatik.asv.utils.CLDACorpus;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,6 +23,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILE;
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
@@ -32,7 +33,6 @@ import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
 /**
  * Basic link miner based on original link miner from Kiwi
  *
- * @todo: Repair implementation
  * @author Lukáš Kurčík
  */
 public class BasicLinkMiner extends AModule implements LinkMiner {
@@ -60,6 +60,7 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
     /**
      * Recomputes actual clustering based on number of ingoing and outgoing links.
      * Compares new clustering with old and saves new clustering in the same way as Clustering implementations
+     * Saves all url-cluster pairs into Clustering::URL_CLUSTER_FILE
      *
      * @param distanceModel Distance model
      * @param ranking       Ranking function used in computing
@@ -74,6 +75,26 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
         loadClusterInfo();
 
         getLogger().info("Recalculating clustering based on links");
+        LinkMiningModel model = computeModel(distanceModel, ranking, strategy);
+
+        getLogger().info("Saving clustering after link mining");
+        saveClusters(model);
+
+        getLogger().info("Computing index of clustering");
+        computeClusteringIndex(model);
+
+        getLogger().info("Link mining finished");
+    }
+
+    /**
+     * Computes new model base on link mining
+     *
+     * @param distanceModel Distance model
+     * @param ranking       Ranking function used in computing
+     * @param strategy      Specify if distances should be compared based on mean or median
+     * @return New model
+     */
+    protected LinkMiningModel computeModel(DistanceModel distanceModel, Ranking ranking, LinkMiningStrategy strategy) {
         rankingMap = new double[docToCluster.size()][clusters];
         List<String> docLinks;
 
@@ -98,55 +119,48 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
                         strategy == LinkMiningStrategy.MEAN ? distanceModel.meanDistance(docCluster) : distanceModel.medianDistance(docCluster));
             }
         }
-
-        getLogger().info("Building new HDP model");
-        CLDACorpus corpus = getCorpus();
-        HDPModel model = createHDPModel(rankingMap, corpus);
-
-        getLogger().info("Saving clustering after link mining");
-        saveClusters(model, corpus);
-
-        getLogger().info("Computing index of clustering");
-        computeClusteringIndex();
-
-        getLogger().info("Link mining finished");
+        return new LinkMiningModel(rankingMap);
     }
-
 
     /**
      * Computes and log clustering index
      *
-     * @throws IOException when there is problem with file IO
+     * @param model link mining model
      */
-    protected void computeClusteringIndex() throws IOException {
-        try {
-            HDPClusteringModel modelOld = new HDPClusteringModel(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
-            HDPClusteringModel modelNew = new HDPClusteringModel(downloadDir.resolve(LINKMINING_DIR).resolve(CLUSTERING_FILE));
-            GradedDistanceIndex gdi = new GradedDistanceIndex();
-            getLogger().info("GD_index before link mining: " + gdi.compute(modelOld));
-            getLogger().info("GD_index after link mining: " + gdi.compute(modelNew));
-        } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "Error while loading clusters", e);
-            throw e;
-        }
+    protected void computeClusteringIndex(LinkMiningModel model) {
+        GradedDistanceIndex gdi = new GradedDistanceIndex();
+        getLogger().info("GD_index after link mining: " + gdi.compute(model));
     }
 
     /**
-     * Saves clusters into CLUSTERING_FILE and each cluster into separate file
+     * Saves clustering into files
      *
-     * @param model  HDP model
-     * @param corpus Corpus with documents
+     * @param model link mining model
      * @throws IOException when there is problem with file IO
      */
-    protected void saveClusters(HDPModel model, CLDACorpus corpus) throws IOException {
+    protected void saveClusters(LinkMiningModel model) throws IOException {
+        Map<Integer, List<Long>> clusterDocs = new HashMap<>();
+        for (int i = 0; i < clusters; i++) {
+            clusterDocs.put(i, IntStream.of(model.getDocuments(i)).boxed().map(Integer::longValue).collect(Collectors.toList()));
+        }
+
+        Map<Integer, Integer> docsToCluster = new HashMap<>();
+        for (int docId = 0; docId < model.getDocumentCount(); docId++) {
+            docsToCluster.put(docId + 1, model.getCluster(docId));
+        }
         try {
             Files.createDirectories(downloadDir.resolve(LINKMINING_DIR));
-
-            int[][] documents = corpus.getDocuments();
-            getLogger().info("Saving clustering probabilities");
-            ClusterSaver.saveClustering(model, documents, downloadDir.resolve(LINKMINING_DIR).resolve(CLUSTERING_FILE));
             getLogger().info("Saving clusters into files");
-            ClusterSaver.saveClusters(model, documents, downloadDir.resolve(LINKMINING_DIR));
+            ClusterSaver.saveClusters(clusterDocs, downloadDir.resolve(LINKMINING_DIR), urlIndex);
+
+            getLogger().info("Saving url - cluster pairs");
+            FileUtils.writeLines(downloadDir.resolve(LINKMINING_DIR).resolve(Clustering.URL_CLUSTER_FILE).toFile(),
+                    docsToCluster.entrySet()
+                            .stream()
+                            .sorted(Comparator.comparing(Map.Entry::getKey))
+                            .map(e -> e.getKey() + " " + urlIndex.getUrl(e.getKey().longValue()) + " " + e.getValue())
+                            .collect(Collectors.toList())
+            );
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Error while saving clusters", e);
             throw e;
@@ -154,42 +168,8 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
     }
 
     /**
-     * Creates new HDP model based on ranking map
-     *
-     * @param rankingMap map of ranking for each document-cluster pair
-     * @param corpus     corpus of documents
-     * @return new HDP Model based on ranking map
-     */
-    protected HDPModel createHDPModel(double[][] rankingMap, CLDACorpus corpus) {
-        HDPModelBuilder builder = new HDPModelBuilder(rankingMap[0].length, corpus.getVocabularySize());
-
-        int[][] documents = corpus.getDocuments();
-        for (int docId = 0; docId < rankingMap.length; docId++) {
-            int topicId = MaxIndex.max(rankingMap[docId]);
-            for (int wordId : documents[docId]) {
-                builder.addTopicWordCount(topicId, wordId, 1);
-            }
-        }
-
-        return builder.build();
-    }
-
-    /**
-     * Gets corpus data for all documents
-     *
-     * @return CLDACorpus
-     */
-    protected CLDACorpus getCorpus() throws IOException {
-        try (FileInputStream fileInputStream = new FileInputStream(downloadDir.resolve(Clustering.CLUSTERING_FILES_DIR).resolve(Clustering.CORPUS_FILE).toFile())) {
-            return new CLDACorpus(fileInputStream);
-        } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "Error while getting document corpus", e);
-            throw e;
-        }
-    }
-
-    /**
      * Loads information about links
+     *
      * @throws IOException when there is problem with file IO
      */
     protected void loadLinkInfo() throws IOException {
@@ -203,6 +183,7 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
 
     /**
      * Load clustering info
+     *
      * @throws IOException when there is problem with file IO
      */
     protected void loadClusterInfo() throws IOException {
