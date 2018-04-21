@@ -6,113 +6,227 @@ import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPClustering;
 import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPDistanceModel;
 import cz.muni.fi.kurcik.kgs.clustering.LDA.LDAClustering;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
+import cz.muni.fi.kurcik.kgs.clustering.util.LogClusterNumber;
+import cz.muni.fi.kurcik.kgs.cmd.OptionsBuilder;
 import cz.muni.fi.kurcik.kgs.download.BasicDownloader;
 import cz.muni.fi.kurcik.kgs.download.Downloader;
 import cz.muni.fi.kurcik.kgs.download.parser.TikaParserFactory;
 import cz.muni.fi.kurcik.kgs.keywords.KeywordGenerator;
-import cz.muni.fi.kurcik.kgs.keywords.RakeKeywordGenerator;
-import cz.muni.fi.kurcik.kgs.keywords.TextRankKeywordGenerator;
+import cz.muni.fi.kurcik.kgs.keywords.TextPageRankKeywordGenerator;
 import cz.muni.fi.kurcik.kgs.linkmining.BasicLinkMiner;
+import cz.muni.fi.kurcik.kgs.linkmining.LinkMiner;
 import cz.muni.fi.kurcik.kgs.linkmining.LinkMiningStrategy;
 import cz.muni.fi.kurcik.kgs.linkmining.ranking.SimplifiedPageRank;
 import cz.muni.fi.kurcik.kgs.preprocessing.MajkaPreprocessor;
 import cz.muni.fi.kurcik.kgs.preprocessing.Preprocessor;
-import cz.muni.fi.kurcik.kgs.util.Majka;
+import org.apache.commons.cli.*;
 import org.apache.tika.langdetect.OptimaizeLangDetector;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 /**
+ * Main class for application
+ *
  * @author Lukáš Kurčík
  */
 public class Main {
-    static Logger logger;
 
-    public static void main(String[] args) throws IOException, URISyntaxException {
-        logger = Logger.getLogger("downloadLogger");
-        Path path;
-        if (System.getProperty("os.name").contains("Windows"))
-            path = Paths.get("W:/");
-        else
-            path = Paths.get("/mnt/w/");
+    public static void main(String[] args) throws ParseException, IOException {
+        Options options = OptionsBuilder.getOptions();
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd = parser.parse(options, args);
 
-//        path = path.resolve("Baka/kreveta/");
-        path = path.resolve("Baka/d1702/");
-        Files.createDirectories(path);
+        if (help(options, cmd))
+            return;
 
-        FileHandler fh = new FileHandler(path.resolve("all.log").toString());
-        logger.addHandler(fh);
-        SimpleFormatter formatter = new SimpleFormatter();
-        fh.setFormatter(formatter);
+        // Check dir
+        if (!cmd.hasOption("dir")) {
+            System.err.println("Need to provide dir option");
+            return;
+        }
+        Path dir = Paths.get(cmd.getOptionValue("dir"));
+        Files.createDirectory(dir);
 
-//        download(path);
-//        preproccess(path);
-//        clustering(path);
-//        lm(path);
-        keywords(path);
+        // Creates logger
+        Logger logger = Logger.getLogger("kgs");
+        if (cmd.hasOption("log")) {
+            FileHandler fh = new FileHandler(dir.resolve(cmd.getOptionValue("log")).toString());
+            logger.addHandler(fh);
+            SimpleFormatter formatter = new SimpleFormatter();
+            fh.setFormatter(formatter);
+        }
+
+        if (cmd.hasOption("L")) {
+            logger.setLevel(Level.ALL);
+        }
+
+        download(cmd, dir, logger);
+        preprocessing(cmd, dir, logger);
+        clustering(cmd, dir, logger);
+        linkmining(cmd, dir, logger);
+        keywords(cmd, dir, logger);
     }
 
-    public static void keywords(Path path) throws IOException {
-//        KeywordGenerator keywordGenerator = new TextRankKeywordGenerator(logger);
-//        KeywordGenerator keywordGenerator = new RakeKeywordGenerator(logger);
-//        keywordGenerator.setDownloadDirectory(path);
-//        keywordGenerator.generateKeywords(path.resolve("linkmining").resolve("clusters.txt"), 10);
+    /**
+     * Check keywords mining options
+     *
+     * @param cmd
+     * @param dir
+     * @param logger
+     * @throws IOException
+     */
+    public static void keywords(CommandLine cmd, Path dir, Logger logger) throws IOException {
+        if (cmd.hasOption("keywords")) {
+            KeywordGenerator keywordGenerator = new TextPageRankKeywordGenerator();
+            keywordGenerator.setDownloadDirectory(dir);
+            keywordGenerator.generateKeywords(
+                    dir.resolve(
+                            cmd.hasOption("model") && cmd.getOptionValue("model").toLowerCase().compareTo("lm") == 0 ?
+                                    LinkMiner.LINKMINING_DIR : Clustering.CLUSTERING_FILES_DIR
+                    ).resolve(Clustering.CLUSTERING_FILE),
+                    Integer.valueOf(cmd.getOptionValue("w", "10")));
+        }
     }
 
-    public static void lm(Path path) throws IOException {
-        BasicLinkMiner lm = new BasicLinkMiner();
-        lm.setDownloadDirectory(path);
-        DistanceModel dm = new HDPDistanceModel(path.resolve(Clustering.CLUSTERING_FILES_DIR).resolve(Clustering.CLUSTERING_FILE));
-        lm.recompute(dm, new SimplifiedPageRank(), LinkMiningStrategy.MEAN);
+    /**
+     * Check link mining options
+     *
+     * @param cmd
+     * @param dir
+     * @param logger
+     * @throws IOException
+     */
+    public static void linkmining(CommandLine cmd, Path dir, Logger logger) throws IOException {
+        if (cmd.hasOption("linkmining")) {
+            LinkMiner linkMiner = new BasicLinkMiner();
+            linkMiner.setDownloadDirectory(dir);
+            ((BasicLinkMiner) linkMiner).setLogger(logger);
+
+            DistanceModel distanceModel = new HDPDistanceModel(dir.resolve(Clustering.CLUSTERING_FILES_DIR).resolve(Clustering.CLUSTERING_FILE));
+            linkMiner.recompute(distanceModel,
+                    new SimplifiedPageRank(),
+                    cmd.hasOption("distance") && cmd.getOptionValue("distance").toLowerCase().compareTo("mean") == 0
+                            ? LinkMiningStrategy.MEAN : LinkMiningStrategy.MEDIAN);
+        }
     }
 
-    public static void clustering(Path path) throws IOException {
-        logger.log(Level.INFO, "----CLUSTERING----");
-//        HDPClustering clustering = new HDPClustering(logger);
-        LDAClustering clustering = new LDAClustering(10.0, 2.0);
-        clustering.setDownloadDirectory(path);
-        clustering.cluster();
+    /**
+     * Check clustering options
+     *
+     * @param cmd
+     * @param dir
+     * @param logger
+     * @throws IOException
+     */
+    public static void clustering(CommandLine cmd, Path dir, Logger logger) throws IOException {
+        if (cmd.hasOption("clustering")) {
+            Clustering clustering;
+
+            if (cmd.getOptionValue("method").toLowerCase().compareTo("hdp") == 0) {
+                clustering = new HDPClustering(
+                        Double.valueOf(cmd.getOptionValue("alpha", "1")),
+                        Double.valueOf(cmd.getOptionValue("beta", "0.5")),
+                        Double.valueOf(cmd.getOptionValue("gamma", "1.5"))
+                );
+                ((HDPClustering) clustering).setLogger(logger);
+            } else {
+                clustering = new LDAClustering(
+                        new LogClusterNumber(),
+                        Double.valueOf(cmd.getOptionValue("alpha", "2")),
+                        Double.valueOf(cmd.getOptionValue("beta", "0.5"))
+                );
+                ((LDAClustering) clustering).setLogger(logger);
+            }
+
+            clustering.setDownloadDirectory(dir);
+            clustering.cluster();
+        }
     }
 
-    public static void download(Path path) throws IOException, URISyntaxException {
-        logger = Logger.getLogger("downloadLogger2");
-
-        FileHandler fh = new FileHandler(path.resolve("download.log").toString());
-        logger.addHandler(fh);
-        SimpleFormatter formatter = new SimpleFormatter();
-        fh.setFormatter(formatter);
-
-        logger.log(Level.INFO, "----DOWNLOADING----");
-        Downloader downloader = new BasicDownloader(
-                "cs",
-                new TikaParserFactory(),
-                new OptimaizeLangDetector());
-
-
-        downloader.setDownloadDirectory(path);
-//        downloader.downloadPage(new URI("http://localhost/baka/"), 0, 1);
-        downloader.downloadPage(new URI("http://kreveta.net/"), 0, 3);
+    /**
+     * Check downloader options
+     *
+     * @param cmd
+     * @param dir
+     * @param logger
+     * @throws IOException
+     */
+    public static void download(CommandLine cmd, Path dir, Logger logger) throws IOException {
+        if (cmd.hasOption("downloader")) {
+            BasicDownloader downloader = new BasicDownloader("cs", new TikaParserFactory(), new OptimaizeLangDetector());
+            downloader.setDownloadDirectory(dir);
+            downloader.setLogger(logger);
+            downloader.downloadPage(
+                    URI.create(cmd.getOptionValue("url")),
+                    Integer.valueOf(cmd.getOptionValue("hops", "0")),
+                    Integer.valueOf(cmd.getOptionValue("depth", "1")));
+        }
     }
 
-    public static void preproccess(Path path) throws IOException {
-        logger.log(Level.INFO, "----PREPROCESSING----");
-        Preprocessor preprocessor = new MajkaPreprocessor();
-        preprocessor.setDownloadDirectory(path);
-        preprocessor.normalizeParsedFiles();
-        preprocessor.prepareClusteringFiles(new PruningCorpus(0.3, 2000, logger));
+    /**
+     * Check preprocessing options
+     *
+     * @param cmd
+     * @param dir
+     * @param logger
+     * @throws IOException
+     */
+    public static void preprocessing(CommandLine cmd, Path dir, Logger logger) throws IOException {
+        if (cmd.hasOption("preprocessing")) {
+            Preprocessor preprocessor = new MajkaPreprocessor();
+            preprocessor.setDownloadDirectory(dir);
+            preprocessor.normalizeParsedFiles();
+            preprocessor.prepareClusteringFiles(new PruningCorpus(
+                    Double.valueOf(cmd.getOptionValue("redundant", "0.3")),
+                    Integer.valueOf(cmd.getOptionValue("vocabulary", "2000")),
+                    logger));
+        }
+    }
+
+    /**
+     * Check help commands
+     *
+     * @param options
+     * @param cmd
+     */
+    public static boolean help(Options options, CommandLine cmd) {
+        if (cmd.hasOption("helpm")) {
+            Options helpOptions;
+            switch (cmd.getOptionValue("helpm")) {
+                case "downloader":
+                    helpOptions = OptionsBuilder.getDownloaderOptions();
+                    break;
+                case "preprocessing":
+                    helpOptions = OptionsBuilder.getPreprocessingOptions();
+                    break;
+                case "clustering":
+                    helpOptions = OptionsBuilder.getClusteringOptions();
+                    break;
+                case "linkmining":
+                    helpOptions = OptionsBuilder.getLinkminingOptions();
+                    break;
+                case "keywords":
+                    helpOptions = OptionsBuilder.getKeywordsOptions();
+                    break;
+                default:
+                    helpOptions = options;
+            }
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("-" + cmd.getOptionValue("helpm"), helpOptions);
+            return true;
+        } else if (cmd.hasOption("h")) {
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp(" ", options);
+            return true;
+        }
+        return false;
     }
 }

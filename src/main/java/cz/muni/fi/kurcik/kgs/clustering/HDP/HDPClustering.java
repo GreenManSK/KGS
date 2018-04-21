@@ -20,10 +20,25 @@ public class HDPClustering extends AModule implements Clustering {
 
     protected final static String MODEL_FILE = "model.dat";
 
+    protected double alpha, beta, gamma;
+
     /**
-     * Create new majka preprocessor
+     * Create new HDP clustering
      */
     public HDPClustering() {
+        this(1.0D, 0.5D, 1.5D);
+    }
+
+    /**
+     * Create new HDP clustering
+     * @param alpha Alpha parameter of model
+     * @param beta Beta parameter of model
+     * @param gamma Gamma parameter of model
+     */
+    public HDPClustering(double alpha, double beta, double gamma) {
+        this.alpha = alpha;
+        this.beta = beta;
+        this.gamma = gamma;
     }
 
     /**
@@ -37,6 +52,9 @@ public class HDPClustering extends AModule implements Clustering {
         getLogger().info("Starting clustering");
         try (FileInputStream fileInputStream = new FileInputStream(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CORPUS_FILE).toFile())) {
             HDPGibbsSampler2 hdp = new HDPGibbsSampler2();
+            hdp.alpha = alpha;
+            hdp.beta = beta;
+            hdp.gamma = gamma;
 
             getLogger().info("Preparing corpus");
             CLDACorpus corpus = new CLDACorpus(fileInputStream);
