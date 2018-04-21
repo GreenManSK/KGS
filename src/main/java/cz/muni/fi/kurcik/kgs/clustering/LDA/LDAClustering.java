@@ -8,6 +8,7 @@ import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPClusteringModel;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.Vocabulary;
 import cz.muni.fi.kurcik.kgs.clustering.index.FuzzyIndex;
 import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
+import cz.muni.fi.kurcik.kgs.clustering.util.ClusterNumber;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
 import cz.muni.fi.kurcik.kgs.util.AModule;
 import cz.muni.fi.kurcik.kgs.util.UrlIndex;
@@ -29,23 +30,28 @@ public class LDAClustering extends AModule implements Clustering {
     String MODEL_EXT = ".model";
 
     protected double alpha, beta;
+    protected ClusterNumber clusterNumber;
 
     /**
      * Create new majka preprocessor
+     *
+     * @param clusterNumber Class for computing maximum number of clusters
      */
-    public LDAClustering() {
-        this(2.0, 0.5);
+    public LDAClustering(ClusterNumber clusterNumber) {
+        this(clusterNumber, 2.0, 0.5);
     }
 
     /**
      * Create new majka preprocessor
      *
-     * @param alpha  symmetric prior parameter on document--topic associations
-     * @param beta   symmetric prior parameter on topic--term associations
+     * @param clusterNumber Class for computing maximum number of clusters
+     * @param alpha         symmetric prior parameter on document--topic associations
+     * @param beta          symmetric prior parameter on topic--term associations
      */
-    public LDAClustering(double alpha, double beta) {
+    public LDAClustering(ClusterNumber clusterNumber, double alpha, double beta) {
         this.alpha = alpha;
         this.beta = beta;
+        this.clusterNumber = clusterNumber;
     }
 
     /**
@@ -65,42 +71,12 @@ public class LDAClustering extends AModule implements Clustering {
         TreeMap<Double, Integer> gd_index = new TreeMap<>();
         HashMap<Integer, LdaModel> models = new HashMap<>();
 
-        for (int k = 2; k <= 30; k++) {
-            getLogger().info("LDA with K = " + k);
-            getLogger().info("Creating LDA Gibbs Sampler K = " + k);
-            LdaGibbsSampler ldaGibbsSampler = new LdaGibbsSampler(corpus.getDocument(), corpus.getVocabularySize());
-
-            getLogger().info("Training model K = " + k);
-            ldaGibbsSampler.gibbs(k, alpha, beta);
-
-            getLogger().info("Getting model  K = " + k);
-            double[][] phi = ldaGibbsSampler.getPhi();
-
-
-            Map<String, Double>[] topicMap = new Map[phi.length];
-            for (int q = 0; q < phi.length; ++q) {
-                topicMap[q] = new LinkedHashMap<>();
-
-                HashMap<String, Double> help = new HashMap<>();
-                for (int i = 0; i < phi[q].length; i++) {
-                    help.put(corpus.getVocabulary().getWord(i), phi[q][i]);
-                }
-
-                final int x = q;
-                help.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getValue)).limit(50).forEach(e -> {
-                    topicMap[x].put(e.getKey(), e.getValue());
-                });
-            }
-
-            LdaModel model = new LdaModel(topicMap);
+        int max = clusterNumber.compute(corpus.getDocument().length);
+        for (int k = 1; k <= max; k++) {
+            LdaModel model = computeModel(corpus, k);
             models.put(k, model);
 
-            getLogger().info("Saving model K = " + k);
-            model.saveModel(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(LDA_CLUSTERS_DIR).resolve(k + MODEL_EXT));
-
-            getLogger().info("Saving clustering for K = " + k);
-            Path clusteringFile = downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(LDA_CLUSTERS_DIR).resolve(k + ".txt");
-            saveClustering(corpus, model, clusteringFile);
+            Path clusteringFile = saveModel(k, corpus, model);
 
             FuzzyClusteringModel clusteringModel = new HDPClusteringModel(clusteringFile); // LDA and HDP use same output
             FuzzyIndex gdi = new GradedDistanceIndex();
@@ -112,20 +88,64 @@ public class LDAClustering extends AModule implements Clustering {
         int bestK = gd_index.lastEntry().getValue();
         getLogger().info("Best clustering is K=" + bestK + " with GD_index=" + gd_index.lastKey());
 
-        int[][] documents = corpus.getDocument();
-        Vocabulary vocabulary = new Vocabulary(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(VOCAB_FILE));
-        int[][] translated = new int[documents.length][vocabulary.size()];
+        saveFinalClustering(corpus, models.get(bestK));
+    }
 
-        for (int document = 0; document < documents.length; document++) {
-            for (int i = 0; i < documents[document].length; i++) {
-                translated[document][Integer.parseInt(corpus.getVocabulary().getWord(documents[document][i]))] = documents[document][i];
+    /**
+     * Computes LDA model from corpus with k clusters
+     *
+     * @param corpus Corpius
+     * @param k      Number of clusters
+     * @return LDA module
+     */
+    protected LdaModel computeModel(Corpus corpus, int k) {
+        getLogger().info("LDA with K = " + k);
+        getLogger().info("Creating LDA Gibbs Sampler K = " + k);
+        LdaGibbsSampler ldaGibbsSampler = new LdaGibbsSampler(corpus.getDocument(), corpus.getVocabularySize());
+
+        getLogger().info("Training model K = " + k);
+        ldaGibbsSampler.gibbs(k, alpha, beta);
+
+        getLogger().info("Getting model  K = " + k);
+        double[][] phi = ldaGibbsSampler.getPhi();
+
+
+        Map<String, Double>[] topicMap = new Map[phi.length];
+        for (int q = 0; q < phi.length; ++q) {
+            topicMap[q] = new LinkedHashMap<>();
+
+            HashMap<String, Double> help = new HashMap<>();
+            for (int i = 0; i < phi[q].length; i++) {
+                help.put(corpus.getVocabulary().getWord(i), phi[q][i]);
             }
+
+            final int x = q;
+            help.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getValue)).limit(50).forEach(e -> {
+                topicMap[x].put(e.getKey(), e.getValue());
+            });
         }
 
-        getLogger().info("Saving clustering probabilities");
-        ClusterSaver.saveClustering(models.get(bestK), documents, downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
-        getLogger().info("Saving clusters into files");
-        ClusterSaver.saveClusters(models.get(bestK), documents, downloadDir.resolve(CLUSTERING_FILES_DIR), new UrlIndex(downloadDir.resolve("ids.txt")));
+        return new LdaModel(topicMap);
+    }
+
+    /**
+     * Saves clustering model
+     *
+     * @param k      Number of clusters
+     * @param corpus Corpus
+     * @param model  Model
+     * @return Path to clustering file
+     * @throws IOException when there is problem with file IO
+     */
+    protected Path saveModel(int k, Corpus corpus, LdaModel model) throws IOException {
+        getLogger().info("Saving model K = " + k);
+        model.saveModel(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(LDA_CLUSTERS_DIR).resolve(k + MODEL_EXT));
+
+        getLogger().info("Saving clustering for K = " + k);
+        Path clusteringFile = downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(LDA_CLUSTERS_DIR).resolve(k + ".txt");
+        saveClustering(corpus, model, clusteringFile);
+
+        return clusteringFile;
     }
 
     /**
@@ -138,18 +158,23 @@ public class LDAClustering extends AModule implements Clustering {
      */
     protected void saveClustering(Corpus corpus, LdaModel model, Path path) throws IOException {
         int[][] documents = corpus.getDocument();
-        Vocabulary vocabulary = new Vocabulary(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(VOCAB_FILE));
-        int[][] translated = new int[documents.length][vocabulary.size()];
-
-        for (int document = 0; document < documents.length; document++) {
-            for (int i = 0; i < documents[document].length; i++) {
-                translated[document][Integer.parseInt(corpus.getVocabulary().getWord(documents[document][i]))] = documents[document][i];
-            }
-        }
-
         ClusterSaver.saveClustering(model, documents, path);
     }
 
+    protected void saveFinalClustering(Corpus corpus, LdaModel model) throws IOException {
+        int[][] documents = corpus.getDocument();
+
+        getLogger().info("Saving clustering probabilities");
+        ClusterSaver.saveClustering(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
+
+        UrlIndex urlIndex = new UrlIndex(downloadDir.resolve("ids.txt"));
+
+        getLogger().info("Saving clusters into files");
+        ClusterSaver.saveClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR), urlIndex);
+
+        getLogger().info("Saving url and cluster pairs");
+        ClusterSaver.saveUrlClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(URL_CLUSTER_FILE), urlIndex);
+    }
 
     /**
      * Loads corpus for LdaGibbsSampler

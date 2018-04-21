@@ -154,13 +154,7 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
             ClusterSaver.saveClusters(clusterDocs, downloadDir.resolve(LINKMINING_DIR), urlIndex);
 
             getLogger().info("Saving url - cluster pairs");
-            FileUtils.writeLines(downloadDir.resolve(LINKMINING_DIR).resolve(Clustering.URL_CLUSTER_FILE).toFile(),
-                    docsToCluster.entrySet()
-                            .stream()
-                            .sorted(Comparator.comparing(Map.Entry::getKey))
-                            .map(e -> e.getKey() + " " + urlIndex.getUrl(e.getKey().longValue()) + " " + e.getValue())
-                            .collect(Collectors.toList())
-            );
+            ClusterSaver.saveUrlClusters(docsToCluster, downloadDir.resolve(LINKMINING_DIR).resolve(Clustering.URL_CLUSTER_FILE), urlIndex);
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Error while saving clusters", e);
             throw e;

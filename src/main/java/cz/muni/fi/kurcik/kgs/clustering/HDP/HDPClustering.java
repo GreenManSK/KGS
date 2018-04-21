@@ -87,10 +87,17 @@ public class HDPClustering extends AModule implements Clustering {
         try {
             HDPModel model = hdp.getModel();
             int[][] documents = corpus.getDocuments();
+
             getLogger().info("Saving clustering probabilities");
             ClusterSaver.saveClustering(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE));
+
+            UrlIndex urlIndex = new UrlIndex(downloadDir.resolve("ids.txt"));
+
             getLogger().info("Saving clusters into files");
-            ClusterSaver.saveClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR), new UrlIndex(downloadDir.resolve("ids.txt")));
+            ClusterSaver.saveClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR), urlIndex);
+
+            getLogger().info("Saving url and cluster pairs");
+            ClusterSaver.saveUrlClusters(model, documents, downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(URL_CLUSTER_FILE), urlIndex);
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Error while saving clusters", e);
             throw e;

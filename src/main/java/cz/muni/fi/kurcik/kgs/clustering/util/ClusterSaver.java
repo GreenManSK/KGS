@@ -1,7 +1,9 @@
 package cz.muni.fi.kurcik.kgs.clustering.util;
 
+import cz.muni.fi.kurcik.kgs.clustering.Clustering;
 import cz.muni.fi.kurcik.kgs.clustering.FuzzyModel;
 import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPModel;
+import cz.muni.fi.kurcik.kgs.util.MaxIndex;
 import cz.muni.fi.kurcik.kgs.util.UrlIndex;
 import org.apache.commons.io.FileUtils;
 
@@ -72,14 +74,7 @@ public class ClusterSaver {
         for (int docId = 0; docId < documents.length; docId++) {
             int[] document = documents[docId];
             double[] vector = model.classifyDoc(document);
-            double max = 0;
-            int maxId = 0;
-            for (int p = 0; p < vector.length; p++) {
-                if (vector[p] > max) {
-                    max = vector[p];
-                    maxId = p;
-                }
-            }
+            int maxId = MaxIndex.max(vector);
             topicDocs.get(maxId).add((long) docId + 1);
         }
 
@@ -104,4 +99,45 @@ public class ClusterSaver {
             FileUtils.writeLines(dir.resolve(topic + ".txt").toFile(), docs);
         }
     }
+
+    /**
+     * Saves url - cluster id pairs into file
+     *
+     * @param model     Clustering model
+     * @param documents matrix with word ids for all documents
+     * @param dir       Path for saving data
+     * @param urlIndex  Index for saving URL address with doc ids
+     * @throws IOException when there is problem with file IO
+     */
+    static public void saveUrlClusters(FuzzyModel model, int[][] documents, Path dir, UrlIndex urlIndex) throws IOException {
+        Map<Integer, Integer> docsToCluster = new HashMap<>();
+
+        for (int docId = 0; docId < documents.length; docId++) {
+            int[] document = documents[docId];
+            double[] vector = model.classifyDoc(document);
+            int maxId = MaxIndex.max(vector);
+            docsToCluster.put(docId + 1, maxId);
+        }
+
+        saveUrlClusters(docsToCluster, dir, urlIndex);
+    }
+
+    /**
+     * Saves url - cluster id pairs into file
+     *
+     * @param docsToCluster Map doc id - cluster id
+     * @param dir           Path for saving data
+     * @param urlIndex      Index for saving URL address with doc ids
+     * @throws IOException when there is problem with file IO
+     */
+    static public void saveUrlClusters(Map<Integer, Integer> docsToCluster, Path dir, UrlIndex urlIndex) throws IOException {
+        FileUtils.writeLines(dir.toFile(),
+                docsToCluster.entrySet()
+                        .stream()
+                        .sorted(Comparator.comparing(Map.Entry::getKey))
+                        .map(e -> e.getKey() + " " + urlIndex.getUrl(e.getKey().longValue()) + " " + e.getValue())
+                        .collect(Collectors.toList())
+        );
+    }
+
 }
