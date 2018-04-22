@@ -80,6 +80,8 @@ public class BasicUrlContainer implements UrlContainer {
     @Override
     public void setAsParsed(URI url) {
         URI normalized = normalizeUrl(url);
+        if (normalized == null)
+            normalized = url;
         parsedUrls.add(normalized);
         urlsIds.put(getNextId(), normalized);
         idCounter++;
@@ -174,6 +176,9 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public boolean isEmpty() {
+        while (!queue.isEmpty() && queue.peek() == null) {
+            queue.poll();
+        }
         return queue.isEmpty();
     }
 
@@ -190,7 +195,6 @@ public class BasicUrlContainer implements UrlContainer {
                 path = uri.getPath().replaceAll("/$", "");
             else
                 path = uri.getPath();
-            System.out.println("norm");
             return new URI("http", uri.getAuthority(), path, uri.getQuery());
         } catch (URISyntaxException e) {
             logger.warning("Couldn't normalize url " + uri + ": " + e.getMessage());

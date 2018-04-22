@@ -37,7 +37,7 @@ public class BasicDownloader extends AModule implements Downloader {
     protected final ParserFactory parserFactory;
 
     protected UrlContainer urlContainer;
-    
+
     /**
      * Create new basic downloader
      *
@@ -75,19 +75,22 @@ public class BasicDownloader extends AModule implements Downloader {
         urlContainer.setHops(hops);
         createDownloadFolder();
 
-        getLogger().info("Started parsing domain " + url);
-        urlContainer.push(url, 0, 0);
-        while (!urlContainer.isEmpty()) {
-            parse(urlContainer.pop());
+        try {
+            getLogger().info("Started parsing domain " + url);
+            urlContainer.push(url, 0, 0);
+            while (!urlContainer.isEmpty()) {
+                parse(urlContainer.pop());
+            }
+        } finally {
+            getLogger().info("Saving ID -> URL pairs");
+            saveIdPairs();
+            getLogger().info("Finished parsing domain " + url);
         }
-
-        getLogger().info("Saving ID -> URL pairs");
-        saveIdPairs();
-        getLogger().info("Finished parsing domain " + url);
     }
 
     /**
      * Parse download url
+     *
      * @param durl URL container
      */
     protected void parse(DownloadURL durl) {

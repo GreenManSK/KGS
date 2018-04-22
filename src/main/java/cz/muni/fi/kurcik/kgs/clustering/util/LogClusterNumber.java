@@ -18,7 +18,7 @@ public class LogClusterNumber implements ClusterNumber {
         if (documents < 30)
             return documents;
         return Double.valueOf(
-                Math.log(1 + documents * documents) / Math.log(3 / 2) + 3 * Math.floorDiv(documents, 200)
+                Math.log(1 + documents * documents) / Math.log(3.0D / 2.0D) + 3 * Math.floorDiv(documents, 200)
         ).intValue();
     }
 }

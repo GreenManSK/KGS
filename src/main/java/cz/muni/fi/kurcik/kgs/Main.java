@@ -53,7 +53,9 @@ public class Main {
             return;
         }
         Path dir = Paths.get(cmd.getOptionValue("dir"));
-        Files.createDirectory(dir);
+        if (!Files.exists(dir)) {
+            Files.createDirectory(dir);
+        }
 
         // Creates logger
         Logger logger = Logger.getLogger("kgs");
