@@ -221,6 +221,7 @@ public class Main {
                 default:
                     helpOptions = options;
             }
+            OptionsBuilder.addCommons(helpOptions);
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("-" + cmd.getOptionValue("helpm"), helpOptions);
             return true;

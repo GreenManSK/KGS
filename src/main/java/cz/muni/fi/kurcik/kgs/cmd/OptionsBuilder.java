@@ -80,7 +80,7 @@ public class OptionsBuilder {
     /**
      * Add options used in all modules
      */
-    protected static void addCommons(Options options) {
+    public static void addCommons(Options options) {
         options.addOption("h", "help", false,
                 "Print this message");
         options.addOption( "helpm", true,
