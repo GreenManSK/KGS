@@ -94,6 +94,8 @@ public class BasicDownloader extends AModule implements Downloader {
      * @param durl URL container
      */
     protected void parse(DownloadURL durl) {
+        if (durl == null)
+            return;
         URI url = durl.getUrl();
         getLogger().info("Parsing " + url + "; depth: " + durl.getDepth() + "; hops: " + durl.getHops());
 

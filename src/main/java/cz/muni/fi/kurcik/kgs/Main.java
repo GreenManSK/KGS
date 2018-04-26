@@ -9,7 +9,6 @@ import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
 import cz.muni.fi.kurcik.kgs.clustering.util.LogClusterNumber;
 import cz.muni.fi.kurcik.kgs.cmd.OptionsBuilder;
 import cz.muni.fi.kurcik.kgs.download.BasicDownloader;
-import cz.muni.fi.kurcik.kgs.download.Downloader;
 import cz.muni.fi.kurcik.kgs.download.parser.TikaParserFactory;
 import cz.muni.fi.kurcik.kgs.keywords.KeywordGenerator;
 import cz.muni.fi.kurcik.kgs.keywords.TextPageRankKeywordGenerator;

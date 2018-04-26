@@ -116,6 +116,7 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public void push(URI url, int depth, int hops) {
+        url = normalizeUrl(url);
         if (isParsed(url))
             return;
 
@@ -162,11 +163,9 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public DownloadURL pop() {
-        DownloadURL pop = queue.poll();
-        while (pop != null && isParsed(pop.getUrl())) {
-            pop = queue.poll();
-        }
-        return pop;
+        if (isEmpty())
+            return null;
+        return queue.poll();
     }
 
     /**
@@ -176,10 +175,17 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public boolean isEmpty() {
-        while (!queue.isEmpty() && queue.peek() == null) {
+        cleanQueue();
+        return queue.isEmpty();
+    }
+
+    /**
+     * Removes parsed and null URLs from queue
+     */
+    protected void cleanQueue() {
+        while (!queue.isEmpty() && (queue.peek() == null || isParsed(queue.peek().getUrl()))) {
             queue.poll();
         }
-        return queue.isEmpty();
     }
 
     /**
