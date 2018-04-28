@@ -86,8 +86,13 @@ public class Main {
      */
     public static void keywords(CommandLine cmd, Path dir, Logger logger) throws IOException {
         if (cmd.hasOption("keywords")) {
-            KeywordGenerator keywordGenerator = new TextPageRankKeywordGenerator();
+            TextPageRankKeywordGenerator keywordGenerator = new TextPageRankKeywordGenerator();
+            keywordGenerator.setLogger(logger);
             keywordGenerator.setDownloadDirectory(dir);
+
+            if (cmd.hasOption("skiptr"))
+                keywordGenerator.setRunTextRank(false);
+
             keywordGenerator.generateKeywords(
                     dir.resolve(
                             cmd.hasOption("model") && cmd.getOptionValue("model").toLowerCase().compareTo("lm") == 0 ?

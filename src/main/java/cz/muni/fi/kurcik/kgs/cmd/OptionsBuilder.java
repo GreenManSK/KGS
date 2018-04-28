@@ -132,5 +132,6 @@ public class OptionsBuilder {
     protected static void addKeywords(Options options) {
         options.addOption("w", "words", true, "Number of keywords for each cluster");
         options.addOption("model", true, "Type of model used for keywords - c for clustering, lm for link mining");
+        options.addOption("skiptr", false, "Skip text rank on all documents");
     }
 }

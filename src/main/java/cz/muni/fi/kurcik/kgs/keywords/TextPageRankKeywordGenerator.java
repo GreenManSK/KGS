@@ -31,9 +31,10 @@ import java.util.stream.Collectors;
 public class TextPageRankKeywordGenerator extends AModule implements KeywordGenerator {
 
     private static final String DOC_KEYWORDS_DIR = "documents";
-    private static final double TEXT_RANK_LOWER_BOUND = 0.05D;
+    private static final double TEXT_RANK_LOWER_BOUND = 0.03D;
 
     protected int maxNGramLength;
+    protected boolean runTextRank = true;
 
     /**
      * Create new generator
@@ -64,7 +65,9 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
         getLogger().info("Starting keywords generation");
         createKeywordsFolder();
 
-        generateDocumentKeywords();
+        if (runTextRank) {
+            generateDocumentKeywords();
+        }
         generateClusterKeywords(keywordsForCluster);
     }
 
@@ -234,5 +237,13 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
                 throw e;
             }
         }
+    }
+
+    /**
+     * Specify if text rank should be run first on all documents
+     * @param runTextRank True if should be run
+     */
+    public void setRunTextRank(boolean runTextRank) {
+        this.runTextRank = runTextRank;
     }
 }
