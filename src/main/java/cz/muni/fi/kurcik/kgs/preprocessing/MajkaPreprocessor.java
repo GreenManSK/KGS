@@ -80,7 +80,8 @@ public class MajkaPreprocessor extends AModule implements Preprocessor {
     protected List<String> filterTokens(List<String> tokens) {
         return tokens.stream()
                 .filter(token -> !stopWords.contains(token.toLowerCase()))
-                .filter(token -> token.length() > 2)
+                .filter(token -> token.length() > 3)
+                .filter(token ->token.length() < 30)
                 .filter(token -> !numberPattern.matcher(token).find())
                 .collect(Collectors.toList());
     }

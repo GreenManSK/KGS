@@ -189,6 +189,7 @@ public class Main {
             preprocessor.setDownloadDirectory(dir);
             preprocessor.normalizeParsedFiles();
             preprocessor.prepareClusteringFiles(new PruningCorpus(
+                    Double.valueOf(cmd.getOptionValue("pruning", "0")),
                     Double.valueOf(cmd.getOptionValue("redundant", "0.3")),
                     Integer.valueOf(cmd.getOptionValue("vocabulary", "2000")),
                     logger));

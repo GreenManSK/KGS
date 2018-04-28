@@ -1,5 +1,7 @@
 package cz.muni.fi.kurcik.kgs.clustering.corpus;
 
+import org.apache.commons.io.FileUtils;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
@@ -11,7 +13,7 @@ import java.util.stream.IntStream;
 /**
  * Corpus builder that uses pruning of vocabulary for memory and clustering efficiency
  * Pruning rate specify at which percentage of processed documents will be words with occurrence count equals to 1 removed.
- * Vocabulary size could be larger that wanted size. Words with same occurrence count as lacs word will be left untouched.
+ * Vocabulary size could be larger that wanted size. Words with same occurrence count as last word will be left untouched.
  *
  * @author Lukáš Kurčík
  */
@@ -143,7 +145,7 @@ public class PruningCorpus extends AbstractCorpus {
      * Remove redundant words
      */
     protected void removeRedundant() {
-        logger.info("Removing redundant words with percentage " + redundantPercentage + "% and higher, actual size = " + vocabulary.size());
+        logger.info("Removing redundant words with percentage " + (redundantPercentage * 100) + "% and higher, actual size = " + vocabulary.size());
         LinkedHashMap<String, Long> sortedCounter = wordInDocCounter.entrySet().stream()
                 .sorted((Comparator<Map.Entry<String, Long>> & Serializable) (c1, c2) -> c2.getValue().compareTo(c1.getValue()))
                 .collect(Collectors.toMap(

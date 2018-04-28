@@ -106,6 +106,7 @@ public class OptionsBuilder {
     protected static void addPreprocessing(Options options) {
         options.addOption("v", "vocabulary", true, "Vocabulary size. Default: 2000");
         options.addOption("redundant", true, "Specify percentage of documents, that contains words for word to be dropped. Default: 0.3");
+        options.addOption("pruning", true, "Specify at which percentage of processed documents will be words with occurrence count equals to 1 removed. 0 means never. Default: 0");
     }
 
     /**

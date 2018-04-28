@@ -72,10 +72,8 @@ public class LDAClustering extends AModule implements Clustering {
         HashMap<Integer, LdaModel> models = new HashMap<>();
 
         int max = clusterNumber.compute(corpus.getDocument().length);
-        System.out.println(max);
-        if (true)
-            throw new IOException("");
-        for (int k = 1; k <= max; k++) {
+
+        for (int k = 2; k <= max; k++) {
             LdaModel model = computeModel(corpus, k);
             models.put(k, model);
 

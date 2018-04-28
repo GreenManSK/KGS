@@ -7,10 +7,7 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -117,6 +114,7 @@ public class Vocabulary {
      * @param word word
      */
     public void remove(String word) {
+        word = word.toLowerCase();
         id2word.remove(getId(word));
         word2id.remove(word);
     }
@@ -147,7 +145,8 @@ public class Vocabulary {
      * @throws IOException When there is problem with saving
      */
     public void save(Path file) throws IOException {
-        FileUtils.writeLines(file.toFile(), word2id.entrySet().stream().map(it -> it.getValue() + " " + it.getKey()).collect(Collectors.toList()));
+        FileUtils.writeLines(file.toFile(), word2id.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getValue))
+                .map(it -> it.getValue() + " " + it.getKey()).collect(Collectors.toList()));
     }
 
     /**
