@@ -47,6 +47,12 @@ public interface UrlContainer {
     void setAsParsed(URI url);
 
     /**
+     * Set URL as rejected.
+     * @param url
+     */
+    void setAsRejected(URI url);
+
+    /**
      * Return id that would be assigned to the URL in next setAsParsed() call
      *
      * @return Next id

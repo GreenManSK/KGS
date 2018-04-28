@@ -35,6 +35,8 @@ public class TikaParser implements Parser {
     protected Path file;
     protected Metadata metadata;
 
+    protected boolean useContentDetection = true;
+
     private org.apache.tika.parser.Parser parser;
     private ContentHandler bodyHandler = new BodyContentHandler();
     private boolean bodyParsed = false;
@@ -46,6 +48,18 @@ public class TikaParser implements Parser {
      * @param file
      */
     public TikaParser(URI url, Path file) {
+        this(url, file, false);
+    }
+
+    /**
+     * Constructor for new TikaParser
+     *
+     * @param url
+     * @param file
+     * @param useContentDetection Specify if content detection for HTML should be used
+     */
+    public TikaParser(URI url, Path file, boolean useContentDetection) {
+        this.useContentDetection = useContentDetection;
         this.file = file;
         this.url = url;
 
@@ -154,6 +168,7 @@ public class TikaParser implements Parser {
 
     /**
      * Finds extension for provided mime type or returns .ukw
+     *
      * @param mime
      * @return file extension with .
      */
@@ -167,9 +182,30 @@ public class TikaParser implements Parser {
 
     /**
      * Return right BodyHandler based on type of file. Use content detector for HTML
+     *
      * @return body handler
      */
     protected ContentHandler getBodyHandler() {
-        return FilenameUtils.getExtension(file.toString()).compareToIgnoreCase("html") != 0  ? bodyHandler : new BoilerpipeContentHandler(bodyHandler);
+        if (!useContentDetection)
+            return bodyHandler;
+        return FilenameUtils.getExtension(file.toString()).compareToIgnoreCase("html") != 0 ? bodyHandler : new BoilerpipeContentHandler(bodyHandler);
+    }
+
+    /**
+     * Check if content detection is enabled
+     *
+     * @return true if yes
+     */
+    public boolean isUseContentDetection() {
+        return useContentDetection;
+    }
+
+    /**
+     * Set content detection for html pages
+     *
+     * @param useContentDetection true is should be used
+     */
+    public void setUseContentDetection(boolean useContentDetection) {
+        this.useContentDetection = useContentDetection;
     }
 }
