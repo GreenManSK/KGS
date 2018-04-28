@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.*;
@@ -32,6 +33,9 @@ public class MajkaPreprocessor extends AModule implements Preprocessor {
     protected static final String STOP_WORDS_FILE = "majka/stop_words.txt";
 
     protected Path downloadDir;
+
+    protected Set<String> stopWords;
+    protected Pattern numberPattern = Pattern.compile("[0-9]");
 
     /**
      * Create new majka preprocessor
@@ -52,20 +56,33 @@ public class MajkaPreprocessor extends AModule implements Preprocessor {
         Path parsedDir = downloadDir.resolve(Downloader.PARSED_FILES_DIR);
         Path processedDir = downloadDir.resolve(NORMALIZED_FILES_DIR);
 
-        Set<String> stopWords = loadStopWords();
+        stopWords = loadStopWords();
         File[] parsedFiles = parsedDir.toFile().listFiles((File dir, String name) -> name.endsWith(Downloader.PARSED_EXTENSION));
         Majka majka = new Majka();
         for (File parsed : parsedFiles) {
             Path result = processedDir.resolve(parsed.getName());
             String content = FileUtils.readFileToString(parsed, Charsets.UTF_8);
             List<String> tokens = tokenize(content);
-            tokens = tokens.stream().filter(token -> !stopWords.contains(token.toLowerCase())).collect(Collectors.toList());
+            tokens = filterTokens(tokens);
 
             Map<String, String> lemmas = majka.findAll(tokens, Majka.IGNORE_CASE, false);
             FileUtils.writeLines(result.toFile(), tokens.stream().map(lemmas::get).collect(Collectors.toList()), " ");
         }
 
         getLogger().log(Level.INFO, "Normalization finished");
+    }
+
+    /**
+     * Remove stop words, numbers and short words from tokens
+     * @param tokens tokens to be filtered
+     * @return filtered tokens
+     */
+    protected List<String> filterTokens(List<String> tokens) {
+        return tokens.stream()
+                .filter(token -> !stopWords.contains(token.toLowerCase()))
+                .filter(token -> token.length() > 2)
+                .filter(token -> !numberPattern.matcher(token).find())
+                .collect(Collectors.toList());
     }
 
     /**
