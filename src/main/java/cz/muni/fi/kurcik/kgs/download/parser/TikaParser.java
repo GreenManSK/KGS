@@ -125,7 +125,12 @@ public class TikaParser implements Parser {
         if (!bodyParsed) {
             parse(getBodyHandler());
         }
-        return bodyHandler.toString();
+
+        String title = "";
+        if (metadata.get(Metadata.TITLE) != null) {
+            title = metadata.get(Metadata.TITLE) + "\n\n";
+        }
+        return title + bodyHandler.toString();
     }
 
     /**
