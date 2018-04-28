@@ -9,6 +9,8 @@ import java.nio.file.Path;
  */
 public class TikaParserFactory implements ParserFactory {
 
+    protected boolean contentDetection = false;
+
     public TikaParserFactory() {
     }
 
@@ -21,6 +23,14 @@ public class TikaParserFactory implements ParserFactory {
      */
     @Override
     public Parser createParser(URI url, Path file) {
-        return new TikaParser(url, file);
+        return new TikaParser(url, file, this.contentDetection);
+    }
+
+    /**
+     * Set HTML content detection for all created parsers
+     * @param contentDetection True if content detection should be used
+     */
+    public void setContentDetection(boolean contentDetection) {
+        this.contentDetection = contentDetection;
     }
 }

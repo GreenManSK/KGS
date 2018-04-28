@@ -103,6 +103,7 @@ public class BasicDownloader extends AModule implements Downloader {
         if (!url.equals(newUrl)) {
             getLogger().info("Redirect from " + url + " to " + newUrl);
             urlContainer.push(newUrl, durl.getDepth(), durl.getHops());
+            urlContainer.setAsRejected(url);
             return;
         }
 
@@ -118,7 +119,7 @@ public class BasicDownloader extends AModule implements Downloader {
         Path originalFile = downloadDir.resolve(ORIGINAL_FILES_DIR).resolve(fileName);
 
         try {
-            FileUtils.copyURLToFile(url.toURL(), originalFile.toFile());
+            FileUtils.copyURLToFile(url.toURL(), originalFile.toFile(), 30000, 120000);
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Error while downloading " + url, e);
             return;
@@ -129,6 +130,7 @@ public class BasicDownloader extends AModule implements Downloader {
             getLogger().info("Can' be parsed: " + url);
             if (!FileUtils.deleteQuietly(originalFile.toFile()))
                 getLogger().warning("Couldn't delete " + originalFile);
+            urlContainer.setAsRejected(url);
             return;
         }
 
@@ -147,6 +149,7 @@ public class BasicDownloader extends AModule implements Downloader {
             getLogger().info("Invalid language " + url);
             if (!FileUtils.deleteQuietly(originalFile.toFile()))
                 getLogger().warning("Couldn't delete " + originalFile);
+            urlContainer.setAsRejected(url);
             return;
         }
 

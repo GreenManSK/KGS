@@ -97,6 +97,7 @@ public class OptionsBuilder {
         options.addOption("u", "url", true, "Starting url");
         options.addOption("hops", true, "Number of domain hops. Default: 0");
         options.addOption("depth", true, "Maximum depth for downloader. Default: 1");
+        options.addOption("cd", false, "Use content detection for HTML web pages");
     }
 
     /**

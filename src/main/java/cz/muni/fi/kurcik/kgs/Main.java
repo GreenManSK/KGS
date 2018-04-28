@@ -162,7 +162,10 @@ public class Main {
      */
     public static void download(CommandLine cmd, Path dir, Logger logger) throws IOException {
         if (cmd.hasOption("downloader")) {
-            BasicDownloader downloader = new BasicDownloader("cs", new TikaParserFactory(), new OptimaizeLangDetector());
+            TikaParserFactory factory = new TikaParserFactory();
+            if (cmd.hasOption("cd"))
+                factory.setContentDetection(true);
+            BasicDownloader downloader = new BasicDownloader("cs", factory, new OptimaizeLangDetector());
             downloader.setDownloadDirectory(dir);
             downloader.setLogger(logger);
             downloader.downloadPage(

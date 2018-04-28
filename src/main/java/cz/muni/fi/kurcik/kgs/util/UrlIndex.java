@@ -113,7 +113,7 @@ public class UrlIndex {
     protected URI normalize(URI url) {
         if (url.getPath() == null || url.getPath().isEmpty())
             url = url.resolve("/");
-        return url;
+        return UriBuilder.fromUri(url).scheme("http").fragment(null).build();
     }
 
     /**

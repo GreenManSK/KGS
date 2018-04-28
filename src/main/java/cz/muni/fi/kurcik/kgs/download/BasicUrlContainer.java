@@ -2,6 +2,7 @@ package cz.muni.fi.kurcik.kgs.download;
 
 import cz.muni.fi.kurcik.kgs.download.containers.UrlContainer;
 
+import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
@@ -69,7 +70,7 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public boolean isParsed(URI url) {
-        return parsedUrls.contains(normalizeUrl(url));
+        return parsedUrls.contains(normalizeScheme(normalizeUrl(url)));
     }
 
     /**
@@ -82,9 +83,29 @@ public class BasicUrlContainer implements UrlContainer {
         URI normalized = normalizeUrl(url);
         if (normalized == null)
             normalized = url;
+        normalized = normalizeScheme(normalized);
+        if (normalized == null)
+            normalized = url;
         parsedUrls.add(normalized);
+        logger.info("URL " + normalized + " gets ID " + getNextId());
         urlsIds.put(getNextId(), normalized);
         idCounter++;
+    }
+
+    /**
+     * Set URL as rejected.
+     *
+     * @param url
+     */
+    @Override
+    public void setAsRejected(URI url) {
+        URI normalized = normalizeUrl(url);
+        if (normalized == null)
+            normalized = url;
+        normalized = normalizeScheme(normalized);
+        if (normalized == null)
+            normalized = url;
+        parsedUrls.add(normalized);
     }
 
     /**
@@ -201,10 +222,19 @@ public class BasicUrlContainer implements UrlContainer {
                 path = uri.getPath().replaceAll("/$", "");
             else
                 path = uri.getPath();
-            return new URI("http", uri.getAuthority(), path, uri.getQuery());
+            return new URI(uri.getScheme(), uri.getAuthority(), path, uri.getQuery());
         } catch (URISyntaxException e) {
             logger.warning("Couldn't normalize url " + uri + ": " + e.getMessage());
         }
         return uri;
+    }
+
+    /**
+     * Changes URI scheme to http
+     * @param uri
+     * @return uri with http scheme
+     */
+    protected URI normalizeScheme(URI uri) {
+        return uri.getScheme().equals("http") ? uri : UriBuilder.fromUri(uri).scheme("http").build();
     }
 }
