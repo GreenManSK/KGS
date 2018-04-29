@@ -14,10 +14,7 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -97,7 +94,7 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
         for (int doc = 0; doc < docToCluster.size(); doc++) {
             int docCluster = docToCluster.get(doc);
 
-            rankingMap[doc][docCluster] = ranking.clusterRank();
+            rankingMap[doc][docCluster] += ranking.clusterRank();
             long in = inLinks.get(doc + 1);
             long out = outLinks.get(doc + 1);
             docLinks = links.get(doc + 1);
@@ -166,9 +163,9 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
         try {
             double[][] probMatrix = model.getProbabilityMatrix();
             List<String> content = new ArrayList<>();
-            for (int c = 0; c < model.getClusterCount(); c++) {
+            for (int d = 0; d < model.getDocumentCount(); d++) {
                 StringBuilder s = new StringBuilder();
-                for (int d = 0; d < model.getDocumentCount(); d++) {
+                for (int c = 0; c < model.getClusterCount(); c++) {
                     s.append(String.format("%.5f  ", probMatrix[d][c]));
                 }
                 content.add(s.toString());

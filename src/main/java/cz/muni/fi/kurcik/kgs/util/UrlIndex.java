@@ -3,6 +3,7 @@ package cz.muni.fi.kurcik.kgs.util;
 import javax.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,6 +68,16 @@ public class UrlIndex {
         Long id = urlToId.get(url);
         if (id != null) {
             return id;
+        }
+
+        try {
+            URI lastSlash = null;
+            lastSlash = new URI(url.getScheme(), url.getAuthority(), url.getPath().replaceAll("/$", ""), url.getQuery());
+            id = urlToId.get(lastSlash);
+            if (id != null)
+                return id;
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
 
         return urlToId.get(UriBuilder.fromUri(url).scheme(url.getScheme().equals("http") ? "https" : "http").build());

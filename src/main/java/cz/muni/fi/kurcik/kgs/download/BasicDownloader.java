@@ -107,7 +107,7 @@ public class BasicDownloader extends AModule implements Downloader {
             return;
         }
 
-        String extension = FilenameUtils.getExtension(url.getPath());
+        String extension = FilenameUtils.getExtension(url.getPath()).replaceAll("\\?.*$", "");
         if (extension == null || extension.equals("")) {
             extension = TikaParser.extensionFromMime(getMime(url));
         } else
