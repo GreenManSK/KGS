@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILE;
+import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
 
 /**
  * Basic link miner based on original link miner from Kiwi
@@ -202,7 +203,7 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
      * @throws IOException when there is problem with file IO
      */
     protected void loadClusterInfo() throws IOException {
-        ClusterLoader clusterLoader = new ClusterLoader(downloadDir, getLogger());
+        ClusterLoader clusterLoader = new ClusterLoader(downloadDir.resolve(CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE), getLogger());
         clusters = clusterLoader.getClusters();
         docToCluster = clusterLoader.getDocToCluster();
     }
