@@ -1,8 +1,8 @@
 package cz.muni.fi.kurcik.kgs.download;
 
 import cz.muni.fi.kurcik.kgs.download.containers.UrlContainer;
-
 import javax.ws.rs.core.UriBuilder;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
@@ -222,7 +222,7 @@ public class BasicUrlContainer implements UrlContainer {
                 path = uri.getPath().replaceAll("/$", "");
             else
                 path = uri.getPath();
-            return new URI(uri.getScheme(), uri.getAuthority(), path, uri.getQuery());
+            return new URI(uri.getScheme(), uri.getAuthority(), path, uri.getQuery(), null);
         } catch (URISyntaxException e) {
             logger.warning("Couldn't normalize url " + uri + ": " + e.getMessage());
         }
