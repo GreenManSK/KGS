@@ -1,9 +1,12 @@
 package cz.muni.fi.kurcik.kgs.clustering.LDA;
 
+import com.hankcs.lda.LdaGibbsSampler;
 import cz.muni.fi.kurcik.kgs.clustering.FuzzyModel;
+import org.apache.commons.math.special.Gamma;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Map;
@@ -20,6 +23,9 @@ public class LdaModel implements FuzzyModel {
     protected int topics = 0;
     protected int words = 0;
     final protected Map<Integer, Double>[] topicModels;
+    double alpha, beta;
+    int[] nwsum;
+    int [][] nw;
 
     /**
      * Construct from translated phi matrix from LdaGibbsSampler
@@ -27,6 +33,17 @@ public class LdaModel implements FuzzyModel {
      * @param translatedPhi translated phi matrix
      */
     public LdaModel(Map<String, Double>[] translatedPhi) {
+        this(translatedPhi, null);
+    }
+
+    /**
+     * Construct from translated phi matrix from LdaGibbsSampler
+     *
+     * @param translatedPhi translated phi matrix
+     * @param ldaGibbsSampler Gibbs sampler for model
+     */
+    public LdaModel(Map<String, Double>[] translatedPhi, LdaGibbsSampler ldaGibbsSampler) {
+        this.loadSampler(ldaGibbsSampler);
         topics = translatedPhi.length;
         if (topics > 0) {
             topicModels = new Map[topics];
@@ -36,6 +53,34 @@ public class LdaModel implements FuzzyModel {
             words = translatedPhi[0].size();
         } else {
             topicModels = new Map[0];
+        }
+    }
+
+    /**
+     * Loads data from lda gibbs sampler
+     * @param ldaGibbsSampler Gibbs sampler for model
+     */
+    protected void loadSampler(LdaGibbsSampler ldaGibbsSampler) {
+        if (ldaGibbsSampler == null)
+            return;
+        Class objCalss = ldaGibbsSampler.getClass();
+        try {
+            Field alpha = objCalss.getDeclaredField("alpha");
+            Field beta = objCalss.getDeclaredField("beta");
+            Field nw = objCalss.getDeclaredField("nw");
+            Field nwsum = objCalss.getDeclaredField("nwsum");
+
+            alpha.setAccessible(true);
+            beta.setAccessible(true);
+            nw.setAccessible(true);
+            nwsum.setAccessible(true);
+
+            this.alpha = alpha.getDouble(ldaGibbsSampler);
+            this.beta = beta.getDouble(ldaGibbsSampler);
+            this.nw = (int[][]) nw.get(ldaGibbsSampler);
+            this.nwsum = (int[]) nwsum.get(ldaGibbsSampler);
+        } catch (NoSuchFieldException|IllegalAccessException e) {
+            e.printStackTrace();
         }
     }
 
@@ -95,5 +140,28 @@ public class LdaModel implements FuzzyModel {
                 stream.println();
             }
         }
+    }
+
+    /**
+     * Computes log of marginal likelihood using harmonic mean method
+     * @return log of marginal likelihood
+     */
+    public double marginalLogLikelihood() {
+        if (nw == null || nwsum == null)
+            throw new IllegalArgumentException("Marginal log likelihood can be computed onyl for models with phi matrix provided.");
+        double r = 0;
+        int vocabSize = nw[0].length;
+        r = getTopics() * (Math.log(Gamma.logGamma(vocabSize * this.beta)) - vocabSize * Gamma.logGamma(this.beta));
+        for (int i = 0; i < getTopics(); i++) {
+            double p = 0;
+
+            for (int j = 0; j < nw[i].length; j++) {
+                r += Gamma.logGamma(nw[i][j] + this.beta);
+            }
+
+            p -= Gamma.logGamma(nwsum[i] + vocabSize * this.beta);
+            r += p;
+        }
+        return Double.isNaN(r) ? Double.NEGATIVE_INFINITY : r;
     }
 }

@@ -3,11 +3,6 @@ package cz.muni.fi.kurcik.kgs.clustering.LDA;
 import com.hankcs.lda.Corpus;
 import com.hankcs.lda.LdaGibbsSampler;
 import cz.muni.fi.kurcik.kgs.clustering.Clustering;
-import cz.muni.fi.kurcik.kgs.clustering.FuzzyClusteringModel;
-import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPClusteringModel;
-import cz.muni.fi.kurcik.kgs.clustering.corpus.Vocabulary;
-import cz.muni.fi.kurcik.kgs.clustering.index.FuzzyIndex;
-import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterNumber;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
 import cz.muni.fi.kurcik.kgs.util.AModule;
@@ -68,7 +63,7 @@ public class LDAClustering extends AModule implements Clustering {
         getLogger().info("Loading corpus");
         Corpus corpus = loadCorpus();
 
-        TreeMap<Double, Integer> gd_index = new TreeMap<>();
+        TreeMap<Double, Integer> mll = new TreeMap<>();
         HashMap<Integer, LdaModel> models = new HashMap<>();
 
         int max = clusterNumber.compute(corpus.getDocument().length);
@@ -79,15 +74,13 @@ public class LDAClustering extends AModule implements Clustering {
 
             Path clusteringFile = saveModel(k, corpus, model);
 
-            FuzzyClusteringModel clusteringModel = new HDPClusteringModel(clusteringFile); // LDA and HDP use same output
-            FuzzyIndex gdi = new GradedDistanceIndex();
-            double res = gdi.compute(clusteringModel);
-            gd_index.put(res, k);
-            getLogger().info("GD_index for LDA with K=" + k + ": " + res);
+            double res = model.marginalLogLikelihood();
+            mll.put(res, k);
+            getLogger().info("Log of marginal likelihood for LDA with K=" + k + ": " + model.marginalLogLikelihood());
         }
 
-        int bestK = gd_index.lastEntry().getValue();
-        getLogger().info("Best clustering is K=" + bestK + " with GD_index=" + gd_index.lastKey());
+        int bestK = mll.lastEntry().getValue();
+        getLogger().info("Best clustering is K=" + bestK + " with marginal likelihood=" + mll.lastKey());
 
         saveFinalClustering(corpus, models.get(bestK));
     }
@@ -110,7 +103,6 @@ public class LDAClustering extends AModule implements Clustering {
         getLogger().info("Getting model  K = " + k);
         double[][] phi = ldaGibbsSampler.getPhi();
 
-
         Map<String, Double>[] topicMap = new Map[phi.length];
         for (int q = 0; q < phi.length; ++q) {
             topicMap[q] = new LinkedHashMap<>();
@@ -126,7 +118,7 @@ public class LDAClustering extends AModule implements Clustering {
             });
         }
 
-        return new LdaModel(topicMap);
+        return new LdaModel(topicMap, ldaGibbsSampler);
     }
 
     /**
