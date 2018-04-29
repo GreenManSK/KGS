@@ -99,7 +99,7 @@ public class TikaParser implements Parser {
             parse(linkHandler);
             return linkHandler.getLinks().stream().map(link -> {
                 try {
-                    return url.resolve(link.getUri());
+                    return url.resolve("/").resolve(link.getUri());
                 } catch (IllegalArgumentException e) {
                     return url;
                 }
