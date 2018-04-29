@@ -162,7 +162,7 @@ public class BasicDownloader extends AModule implements Downloader {
         }
 
         getLogger().info("Linking " + url);
-        Set<URI> links = parser.getLinks().stream().map(link -> url.resolve(link)).collect(Collectors.toSet());
+        Set<URI> links = parser.getLinks().stream().map(link -> url.resolve("/").resolve(link)).collect(Collectors.toSet());
         urlContainer.push(durl, links);
         saveUrls(downloadDir.resolve(LINKS_FILES_DIR).resolve(urlContainer.getNextId() + LINKS_EXTENSION), links);
 
