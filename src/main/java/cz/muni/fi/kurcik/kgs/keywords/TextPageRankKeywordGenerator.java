@@ -68,16 +68,17 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
         if (runTextRank) {
             generateDocumentKeywords();
         }
-        generateClusterKeywords(keywordsForCluster);
+        generateClusterKeywords(clusteringFile, keywordsForCluster);
     }
 
     /**
      * Generate keywords for all clusters
      *
+     * @param clusteringFile     Path to clustering file
      * @param keywordsForCluster Number of keywords for each cluster to generate
      * @throws IOException when there is problem with file IO
      */
-    protected void generateClusterKeywords(int keywordsForCluster) throws IOException {
+    protected void generateClusterKeywords(Path clusteringFile, int keywordsForCluster) throws IOException {
         getLogger().info("Starting keywords generation for clusters");
 
         // Load link map
@@ -86,7 +87,7 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
         UrlIndex urlIndex = linkMapper.getUrlIndex();
 
         // Load clusters
-        ClusterLoader clusterLoader = new ClusterLoader(downloadDir, getLogger());
+        ClusterLoader clusterLoader = new ClusterLoader(clusteringFile, getLogger());
         Map<Integer, List<Integer>> clusterToDoc = clusterLoader.getClusterToDoc();
 
         for (Map.Entry<Integer, List<Integer>> entry : clusterToDoc.entrySet()) {

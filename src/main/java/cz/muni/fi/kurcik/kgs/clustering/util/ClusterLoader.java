@@ -19,7 +19,7 @@ import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILE;
  */
 public class ClusterLoader {
     private final Logger logger;
-    protected Path downloadDir;
+    protected Path clusteringFile;
 
     protected Map<Integer, List<Integer>> clusterToDoc;
     protected List<Integer> docToCluster;
@@ -28,12 +28,12 @@ public class ClusterLoader {
     /**
      * Creates link mapper
      *
-     * @param downloadDir
+     * @param clusteringFile
      * @param logger
      */
-    public ClusterLoader(Path downloadDir, Logger logger) {
+    public ClusterLoader(Path clusteringFile, Logger logger) {
         this.logger = logger;
-        this.downloadDir = downloadDir;
+        this.clusteringFile = clusteringFile;
     }
 
     /**
@@ -45,7 +45,7 @@ public class ClusterLoader {
         if (docToCluster != null && clusterToDoc != null)
             return;
         logger.info("Loading clustering");
-        List<String> lines = FileUtils.readLines(downloadDir.resolve(Clustering.CLUSTERING_FILES_DIR).resolve(CLUSTERING_FILE).toFile(), Charsets.UTF_8);
+        List<String> lines = FileUtils.readLines(clusteringFile.toFile(), Charsets.UTF_8);
         clusters = lines.get(0).split(" ").length;
 
         docToCluster = new ArrayList<>(lines.size());

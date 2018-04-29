@@ -2,9 +2,6 @@ package cz.muni.fi.kurcik.kgs.linkmining;
 
 import cz.muni.fi.kurcik.kgs.clustering.Clustering;
 import cz.muni.fi.kurcik.kgs.clustering.DistanceModel;
-import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPClusteringModel;
-import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPModel;
-import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPModelBuilder;
 import cz.muni.fi.kurcik.kgs.clustering.index.GradedDistanceIndex;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterLoader;
 import cz.muni.fi.kurcik.kgs.clustering.util.ClusterSaver;
@@ -12,23 +9,20 @@ import cz.muni.fi.kurcik.kgs.linkmining.Mapper.LinkMapper;
 import cz.muni.fi.kurcik.kgs.linkmining.ranking.Ranking;
 import cz.muni.fi.kurcik.kgs.linkmining.util.LinkMiningModel;
 import cz.muni.fi.kurcik.kgs.util.AModule;
-import cz.muni.fi.kurcik.kgs.util.MaxIndex;
 import cz.muni.fi.kurcik.kgs.util.UrlIndex;
-import de.uni_leipzig.informatik.asv.utils.CLDACorpus;
 import org.apache.commons.io.FileUtils;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILE;
-import static cz.muni.fi.kurcik.kgs.clustering.Clustering.CLUSTERING_FILES_DIR;
 
 /**
  * Basic link miner based on original link miner from Kiwi
@@ -79,6 +73,7 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
 
         getLogger().info("Saving clustering after link mining");
         saveClusters(model);
+        saveModel(model);
 
         getLogger().info("Computing index of clustering");
         computeClusteringIndex(model);
@@ -157,6 +152,32 @@ public class BasicLinkMiner extends AModule implements LinkMiner {
             ClusterSaver.saveUrlClusters(docsToCluster, downloadDir.resolve(LINKMINING_DIR).resolve(Clustering.URL_CLUSTER_FILE), urlIndex);
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Error while saving clusters", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Save clusters as one file
+     * @param model
+     * @throws IOException
+     */
+    protected void saveModel(LinkMiningModel model) throws IOException {
+        try {
+            double[][] probMatrix = model.getProbabilityMatrix();
+            List<String> content = new ArrayList<>();
+            for (int c = 0; c < model.getClusterCount(); c++) {
+                StringBuilder s = new StringBuilder();
+                for (int d = 0; d < model.getDocumentCount(); d++) {
+                    s.append(String.format("%.5f  ", probMatrix[d][c]));
+                }
+                content.add(s.toString());
+            }
+            FileUtils.writeLines(
+                    downloadDir.resolve(LINKMINING_DIR).resolve(CLUSTERING_FILE).toFile(),
+                    content
+                    );
+        } catch (IOException e) {
+            getLogger().log(Level.SEVERE, "Error while saving " + CLUSTERING_FILE, e);
             throw e;
         }
     }
