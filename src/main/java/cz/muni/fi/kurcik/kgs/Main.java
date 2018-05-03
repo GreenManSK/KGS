@@ -7,10 +7,10 @@ import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPDistanceModel;
 import cz.muni.fi.kurcik.kgs.clustering.LDA.LDAClustering;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
 import cz.muni.fi.kurcik.kgs.clustering.util.LogClusterNumber;
+import cz.muni.fi.kurcik.kgs.clustering.util.LogTopicNumber;
 import cz.muni.fi.kurcik.kgs.cmd.OptionsBuilder;
 import cz.muni.fi.kurcik.kgs.download.BasicDownloader;
 import cz.muni.fi.kurcik.kgs.download.parser.TikaParserFactory;
-import cz.muni.fi.kurcik.kgs.keywords.KeywordGenerator;
 import cz.muni.fi.kurcik.kgs.keywords.TextPageRankKeywordGenerator;
 import cz.muni.fi.kurcik.kgs.linkmining.BasicLinkMiner;
 import cz.muni.fi.kurcik.kgs.linkmining.LinkMiner;
@@ -145,7 +145,7 @@ public class Main {
                 ((HDPClustering) clustering).setLogger(logger);
             } else {
                 clustering = new LDAClustering(
-                        new LogClusterNumber(),
+                        new LogTopicNumber(),
                         Double.valueOf(cmd.getOptionValue("alpha", "2")),
                         Double.valueOf(cmd.getOptionValue("beta", "0.5"))
                 );

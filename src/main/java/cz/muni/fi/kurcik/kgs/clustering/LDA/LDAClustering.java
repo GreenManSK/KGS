@@ -68,7 +68,12 @@ public class LDAClustering extends AModule implements Clustering {
 
         int max = clusterNumber.compute(corpus.getDocument().length);
 
-        for (int k = 2; k <= max; k++) {
+        int increment = 10;
+        int forMax = ((max + 5) / 10) * 10 + 1;
+        boolean partitionFound = false;
+        double[] partitionMll = new double[(forMax / 10) +1];
+
+        for (int k = 1; k <= forMax; k += increment) {
             LdaModel model = computeModel(corpus, k);
             models.put(k, model);
 
@@ -77,6 +82,18 @@ public class LDAClustering extends AModule implements Clustering {
             double res = model.marginalLogLikelihood();
             mll.put(res, k);
             getLogger().info("Log of marginal likelihood for LDA with K=" + k + ": " + model.marginalLogLikelihood());
+            if (!partitionFound) {
+                int index = k / 10;
+                partitionMll[index] = res;
+                if (index > 1
+                        && partitionMll[index - 2] < partitionMll[index - 1]
+                        && partitionMll[index - 1] > partitionMll[index]) {
+                    partitionFound = true;
+                    forMax = k;
+                    k = k - 2 * increment;
+                    increment = 1;
+                }
+            }
         }
 
         int bestK = mll.lastEntry().getValue();

@@ -52,7 +52,7 @@ public class ClusterLoader {
         clusterToDoc = new HashMap<>();
 
         lines.forEach(line -> {
-            double[] probs = Arrays.stream(line.split(" ")).mapToDouble(Double::parseDouble).toArray();
+            double[] probs = Arrays.stream(line.split(" ")).filter(s -> !s.isEmpty()).mapToDouble(Double::parseDouble).toArray();
             double max = 0;
             int index = 0;
             for (int i = 0; i < probs.length; ++i)
