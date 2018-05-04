@@ -95,33 +95,37 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
             List<Integer> documents = entry.getValue().stream().map(v -> v + 1).collect(Collectors.toList());
             getLogger().info("Generating keywords for cluster " + clusterId + "/" + clusterLoader.getClusters());
 
-            Map<Integer, List<String>> docToKeywords = getKeywords(documents);
-            Graph<String, DefaultEdge> wordGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
+            Map<Integer, List<Pair<String, Double>>> docToKeywords = getKeywords(documents);
+            Graph<Integer, DefaultEdge> wordGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
 
-            getLogger().info("Building word graph for cluster " + clusterId);
-            for (Map.Entry<Integer, List<String>> keywordsEntry: docToKeywords.entrySet()) {
-                Integer document = keywordsEntry.getKey();
-                for (String word: keywordsEntry.getValue()) {
-                    wordGraph.addVertex(word);
-                    for (String link: links.get(document)) {
-                        Long id = urlIndex.getId(link);
-                        if (id == null || !docToKeywords.containsKey(id.intValue())) {
-                            continue;
-                        }
-                        for (String outWord: docToKeywords.get(id.intValue())) {
-                            wordGraph.addVertex(outWord);
-                            wordGraph.addEdge(word, outWord);
-                        }
+            getLogger().info("Building graph for cluster " + clusterId);
+            for (Integer document : documents) {
+                wordGraph.addVertex(document);
+                for (String link : links.get(document)) {
+                    Long id = urlIndex.getId(link);
+                    if (id == null || !docToKeywords.containsKey(id.intValue())) {
+                        continue;
                     }
+                    wordGraph.addVertex(id.intValue());
+                    wordGraph.addEdge(document, id.intValue());
                 }
             }
 
             getLogger().info("Computing page rank for cluster " + clusterId);
-            PageRank<String, DefaultEdge> pageRank = new PageRank<>(wordGraph);
-            Map<String, Double> scores = pageRank.getScores();
+            PageRank<Integer, DefaultEdge> pageRank = new PageRank<>(wordGraph);
+            Map<Integer, Double> scores = pageRank.getScores();
+            Map<String, Double> keywordsValues = new HashMap<>();
+            for (Map.Entry<Integer, List<Pair<String, Double>>> keywordsEntry: docToKeywords.entrySet()) {
+                Integer document = keywordsEntry.getKey();
+                for (Pair<String, Double> wordPair: keywordsEntry.getValue()) {
+                    double v = keywordsValues.getOrDefault(wordPair.getA(), 0.0);
+                    v += wordPair.getB() * scores.get(document);
+                    keywordsValues.put(wordPair.getA(), v);
+                }
+            }
 
             getLogger().info("Saving keywords for cluster " + clusterId);
-            List<String> keywords = scores.entrySet().stream()
+            List<String> keywords = keywordsValues.entrySet().stream()
                     .sorted(Comparator.comparingDouble(e -> ((Map.Entry<String, Double>) e).getValue()).reversed())
                     .limit(keywordsForCluster)
                     .map(e -> e.getKey() + " " + e.getValue())
@@ -145,14 +149,14 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
      * @return Map with keyword lists for documents
      * @throws IOException when there is problem with file IO
      */
-    protected Map<Integer, List<String>> getKeywords(List<Integer> documents) throws IOException {
-        Map<Integer, List<String>> result = new HashMap<>();
+    protected Map<Integer, List<Pair<String, Double>>> getKeywords(List<Integer> documents) throws IOException {
+        Map<Integer, List<Pair<String, Double>>> result = new HashMap<>();
         Path keywordDir = downloadDir.resolve(KEYWORDS_FILES_DIR).resolve(DOC_KEYWORDS_DIR);
-        for (Integer document: documents) {
+        for (Integer document : documents) {
             getLogger().info("Loading keywords for document " + document);
             result.put(document,
                     FileUtils.readLines(keywordDir.resolve(document.toString() + Downloader.PARSED_EXTENSION).toFile(), Charsets.UTF_8)
-                    .stream().map(e -> e.substring(e.indexOf(' ') + 1))
+                            .stream().map(e -> new Pair<String, Double>(e.substring(e.indexOf(' ') + 1), Double.valueOf(e.substring(0, e.indexOf(' ')))))
                             .collect(Collectors.toList()));
         }
         return result;
@@ -242,9 +246,42 @@ public class TextPageRankKeywordGenerator extends AModule implements KeywordGene
 
     /**
      * Specify if text rank should be run first on all documents
+     *
      * @param runTextRank True if should be run
      */
     public void setRunTextRank(boolean runTextRank) {
         this.runTextRank = runTextRank;
+    }
+
+    /**
+     * Helper class for representation of pairs
+     *
+     * @param <A>
+     * @param <B>
+     */
+    protected static class Pair<A, B> {
+        protected A a;
+        protected B b;
+
+        public Pair(A a, B b) {
+            this.a = a;
+            this.b = b;
+        }
+
+        public A getA() {
+            return a;
+        }
+
+        public void setA(A a) {
+            this.a = a;
+        }
+
+        public B getB() {
+            return b;
+        }
+
+        public void setB(B b) {
+            this.b = b;
+        }
     }
 }

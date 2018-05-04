@@ -6,7 +6,6 @@ import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPClustering;
 import cz.muni.fi.kurcik.kgs.clustering.HDP.HDPDistanceModel;
 import cz.muni.fi.kurcik.kgs.clustering.LDA.LDAClustering;
 import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
-import cz.muni.fi.kurcik.kgs.clustering.util.LogClusterNumber;
 import cz.muni.fi.kurcik.kgs.clustering.util.LogTopicNumber;
 import cz.muni.fi.kurcik.kgs.cmd.OptionsBuilder;
 import cz.muni.fi.kurcik.kgs.download.BasicDownloader;

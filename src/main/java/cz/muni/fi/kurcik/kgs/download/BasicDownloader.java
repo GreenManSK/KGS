@@ -103,7 +103,8 @@ public class BasicDownloader extends AModule implements Downloader {
         if (!url.equals(newUrl)) {
             getLogger().info("Redirect from " + url + " to " + newUrl);
             urlContainer.push(newUrl, durl.getDepth(), durl.getHops());
-            urlContainer.setAsRejected(url);
+            if (newUrl.getScheme().equals(url.getScheme()))
+                urlContainer.setAsRejected(url);
             return;
         }
 
@@ -119,6 +120,7 @@ public class BasicDownloader extends AModule implements Downloader {
         Path originalFile = downloadDir.resolve(ORIGINAL_FILES_DIR).resolve(fileName);
 
         try {
+            getLogger().info("Saving " + url + " to " + fileName);
             FileUtils.copyURLToFile(url.toURL(), originalFile.toFile(), 30000, 120000);
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Error while downloading " + url, e);

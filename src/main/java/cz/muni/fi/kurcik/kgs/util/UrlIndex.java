@@ -121,10 +121,17 @@ public class UrlIndex {
      * @param url
      * @return normalized url
      */
-    protected URI normalize(URI url) {
-        if (url.getPath() == null || url.getPath().isEmpty())
-            url = url.resolve("/");
-        return UriBuilder.fromUri(url).scheme("http").fragment(null).build();
+    public static URI normalize(URI url) {
+        try {
+            String path;
+            if (url.getPath() != null && url.getPath().endsWith("/"))
+                path = url.getPath().replaceAll("/$", "");
+            else
+                path = url.getPath();
+            return new URI("http", url.getAuthority(), path, url.getQuery(), null);
+        } catch (URISyntaxException e) {
+            return url;
+        }
     }
 
     /**
@@ -134,6 +141,6 @@ public class UrlIndex {
      * @throws IOException when there is IO problem
      */
     public void save(Path file) throws IOException {
-        Files.write(file, urlToId.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getValue)).map(e -> e.getKey().toString() + " " + e.getValue().toString()).collect(Collectors.toList()), Charset.forName("UTF-8"));
+        Files.write(file, idToUrl.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey)).map(e -> e.getValue().toString() + " " + e.getKey().toString()).collect(Collectors.toList()), Charset.forName("UTF-8"));
     }
 }

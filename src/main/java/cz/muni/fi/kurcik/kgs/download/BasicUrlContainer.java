@@ -1,10 +1,9 @@
 package cz.muni.fi.kurcik.kgs.download;
 
 import cz.muni.fi.kurcik.kgs.download.containers.UrlContainer;
-import javax.ws.rs.core.UriBuilder;
+import cz.muni.fi.kurcik.kgs.util.UrlIndex;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -70,7 +69,7 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public boolean isParsed(URI url) {
-        return parsedUrls.contains(normalizeScheme(normalizeUrl(url)));
+        return parsedUrls.contains(normalizeUrl(url));
     }
 
     /**
@@ -81,11 +80,6 @@ public class BasicUrlContainer implements UrlContainer {
     @Override
     public void setAsParsed(URI url) {
         URI normalized = normalizeUrl(url);
-        if (normalized == null)
-            normalized = url;
-        normalized = normalizeScheme(normalized);
-        if (normalized == null)
-            normalized = url;
         parsedUrls.add(normalized);
         logger.info("URL " + normalized + " gets ID " + getNextId());
         urlsIds.put(getNextId(), normalized);
@@ -100,11 +94,6 @@ public class BasicUrlContainer implements UrlContainer {
     @Override
     public void setAsRejected(URI url) {
         URI normalized = normalizeUrl(url);
-        if (normalized == null)
-            normalized = url;
-        normalized = normalizeScheme(normalized);
-        if (normalized == null)
-            normalized = url;
         parsedUrls.add(normalized);
     }
 
@@ -125,7 +114,7 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public Map<Long, URI> getIdUrlPairs() {
-        return Collections.unmodifiableMap(urlsIds);
+        return urlsIds;
     }
 
     /**
@@ -137,7 +126,6 @@ public class BasicUrlContainer implements UrlContainer {
      */
     @Override
     public void push(URI url, int depth, int hops) {
-        url = normalizeUrl(url);
         if (isParsed(url))
             return;
 
@@ -216,25 +204,6 @@ public class BasicUrlContainer implements UrlContainer {
      * @return uri without fragment
      */
     protected URI normalizeUrl(URI uri) {
-        try {
-            String path;
-            if (uri.getPath() != null && uri.getPath().endsWith("/"))
-                path = uri.getPath().replaceAll("/$", "");
-            else
-                path = uri.getPath();
-            return new URI(uri.getScheme(), uri.getAuthority(), path, uri.getQuery(), null);
-        } catch (URISyntaxException e) {
-            logger.warning("Couldn't normalize url " + uri + ": " + e.getMessage());
-        }
-        return uri;
-    }
-
-    /**
-     * Changes URI scheme to http
-     * @param uri
-     * @return uri with http scheme
-     */
-    protected URI normalizeScheme(URI uri) {
-        return uri.getScheme().equals("http") ? uri : UriBuilder.fromUri(uri).scheme("http").build();
+        return UrlIndex.normalize(uri);
     }
 }
