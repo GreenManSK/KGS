@@ -2,7 +2,11 @@
 #define __int64 int64_t
 
 #include "cz_muni_fi_kurcik_kgs_util_Majka.h"
-#include	"majka.h"
+#ifdef __linux__
+#include	"linux/majka.h"
+#else
+#include	"windows/majka.h"
+#endif
 #include	<iostream>
 #include	<string.h>
 
