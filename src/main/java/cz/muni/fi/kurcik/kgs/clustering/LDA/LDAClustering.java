@@ -74,6 +74,8 @@ public class LDAClustering extends AModule implements Clustering {
         double[] partitionMll = new double[(forMax / 10) +1];
 
         for (int k = 1; k <= forMax; k += increment) {
+            if (mll.containsValue(k))
+                continue;
             LdaModel model = computeModel(corpus, k);
             models.put(k, model);
 
@@ -85,6 +87,12 @@ public class LDAClustering extends AModule implements Clustering {
             if (!partitionFound) {
                 int index = k / 10;
                 partitionMll[index] = res;
+                if (index == 1 && partitionMll[index - 1] > partitionMll[index]) {;
+                    partitionFound = true;
+                    forMax = k;
+                    k = k - increment;
+                    increment = 1;
+                }
                 if (index > 1
                         && partitionMll[index - 2] < partitionMll[index - 1]
                         && partitionMll[index - 1] > partitionMll[index]) {

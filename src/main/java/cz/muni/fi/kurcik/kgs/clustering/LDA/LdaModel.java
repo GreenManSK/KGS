@@ -8,8 +8,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
@@ -43,7 +42,6 @@ public class LdaModel implements FuzzyModel {
      * @param ldaGibbsSampler Gibbs sampler for model
      */
     public LdaModel(Map<String, Double>[] translatedPhi, LdaGibbsSampler ldaGibbsSampler) {
-        this.loadSampler(ldaGibbsSampler);
         topics = translatedPhi.length;
         if (topics > 0) {
             topicModels = new Map[topics];
@@ -54,6 +52,7 @@ public class LdaModel implements FuzzyModel {
         } else {
             topicModels = new Map[0];
         }
+        this.loadSampler(ldaGibbsSampler);
     }
 
     /**
@@ -63,22 +62,34 @@ public class LdaModel implements FuzzyModel {
     protected void loadSampler(LdaGibbsSampler ldaGibbsSampler) {
         if (ldaGibbsSampler == null)
             return;
+        List<Integer> usedWords = new ArrayList<>();
+        for (Map<Integer, Double> topic : topicModels) {
+            usedWords.addAll(topic.keySet());
+        }
         Class objCalss = ldaGibbsSampler.getClass();
         try {
             Field alpha = objCalss.getDeclaredField("alpha");
             Field beta = objCalss.getDeclaredField("beta");
             Field nw = objCalss.getDeclaredField("nw");
-            Field nwsum = objCalss.getDeclaredField("nwsum");
 
             alpha.setAccessible(true);
             beta.setAccessible(true);
             nw.setAccessible(true);
-            nwsum.setAccessible(true);
 
             this.alpha = alpha.getDouble(ldaGibbsSampler);
             this.beta = beta.getDouble(ldaGibbsSampler);
-            this.nw = (int[][]) nw.get(ldaGibbsSampler);
-            this.nwsum = (int[]) nwsum.get(ldaGibbsSampler);
+
+            int[][] nwArray = (int[][]) nw.get(ldaGibbsSampler);
+            this.nw = new int[topics][usedWords.size()];
+            this.nwsum = new int[topics];
+            int wordIndex = 0;
+            for (Integer word : usedWords) {
+                for (int t = 0; t < topics; t++) {
+                    this.nw[t][wordIndex] = nwArray[word][t];
+                    this.nwsum[t] += nwArray[word][t];
+                }
+                wordIndex++;
+            }
         } catch (NoSuchFieldException|IllegalAccessException e) {
             e.printStackTrace();
         }
@@ -148,7 +159,7 @@ public class LdaModel implements FuzzyModel {
      */
     public double marginalLogLikelihood() {
         if (nw == null || nwsum == null)
-            throw new IllegalArgumentException("Marginal log likelihood can be computed onyl for models with phi matrix provided.");
+            throw new IllegalArgumentException("Marginal log likelihood can be computed only for models with phi matrix provided.");
         double r = 0;
         int vocabSize = nw[0].length;
         r = getTopics() * (Math.log(Gamma.logGamma(vocabSize * this.beta)) - vocabSize * Gamma.logGamma(this.beta));
