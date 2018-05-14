@@ -9,6 +9,7 @@ import cz.muni.fi.kurcik.kgs.clustering.corpus.PruningCorpus;
 import cz.muni.fi.kurcik.kgs.clustering.util.LogTopicNumber;
 import cz.muni.fi.kurcik.kgs.cmd.OptionsBuilder;
 import cz.muni.fi.kurcik.kgs.download.BasicDownloader;
+import cz.muni.fi.kurcik.kgs.download.BasicUrlContainer;
 import cz.muni.fi.kurcik.kgs.download.parser.TikaParserFactory;
 import cz.muni.fi.kurcik.kgs.keywords.TextPageRankKeywordGenerator;
 import cz.muni.fi.kurcik.kgs.linkmining.BasicLinkMiner;
@@ -22,6 +23,7 @@ import org.apache.tika.langdetect.OptimaizeLangDetector;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,7 +38,6 @@ import java.util.logging.SimpleFormatter;
  * @author Lukáš Kurčík
  */
 public class Main {
-
     public static void main(String[] args) throws ParseException, IOException {
         Options options = OptionsBuilder.getOptions();
         CommandLineParser parser = new DefaultParser();
@@ -135,7 +136,7 @@ public class Main {
         if (cmd.hasOption("clustering")) {
             Clustering clustering;
 
-            if (cmd.getOptionValue("method").toLowerCase().compareTo("hdp") == 0) {
+            if (!cmd.hasOption("method") || cmd.getOptionValue("method").toLowerCase().compareTo("hdp") == 0) {
                 clustering = new HDPClustering(
                         Double.valueOf(cmd.getOptionValue("alpha", "1")),
                         Double.valueOf(cmd.getOptionValue("beta", "0.5")),
@@ -167,8 +168,7 @@ public class Main {
     public static void download(CommandLine cmd, Path dir, Logger logger) throws IOException {
         if (cmd.hasOption("downloader")) {
             TikaParserFactory factory = new TikaParserFactory();
-            if (cmd.hasOption("cd"))
-                factory.setContentDetection(true);
+            factory.setContentDetection(true);
             BasicDownloader downloader = new BasicDownloader("cs", factory, new OptimaizeLangDetector());
             downloader.setDownloadDirectory(dir);
             downloader.setLogger(logger);
