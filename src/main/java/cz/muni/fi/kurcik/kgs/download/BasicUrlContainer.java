@@ -7,12 +7,16 @@ import java.net.URI;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * UrlContainer that ignores #hash part of URLs
  */
 public class BasicUrlContainer implements UrlContainer {
     private final Logger logger;
+
+    final protected Pattern hostPattern = Pattern.compile("(([^.]+\\.)?[a-zA-Z]+)$");
 
     protected int maxDepth = 0;
     protected int maxHops = 0;
@@ -130,7 +134,7 @@ public class BasicUrlContainer implements UrlContainer {
             return;
 
         if (depth > maxDepth || hops > maxHops) {
-            logger.log(Level.INFO, "Rejected: " + url + "; depth: " + depth + "; hops: " +hops);
+            logger.log(Level.INFO, "Rejected: " + url + "; depth: " + depth + "; hops: " + hops);
             return;
         }
         DownloadURL downloadURL = new DownloadURL(url, hops, depth);
@@ -139,29 +143,29 @@ public class BasicUrlContainer implements UrlContainer {
 
     /**
      * Push mre URL into queue. Depth and hops are computed based on parent.
+     *
      * @param parent Parent url
-     * @param url New url
+     * @param url    New url
      */
     @Override
     public void push(DownloadURL parent, URI url) {
         int hops = parent.getHops();
-
-        String host = normalizeUrl(parent.getUrl()).getHost().replaceAll("^www.", "");
-
-        if (!normalizeUrl(url).toString().contains(host)) {
+        if (!getHost(parent.getUrl()).equals(getHost(url))) {
             hops++;
         }
+
         push(url, parent.getDepth() + 1, hops);
     }
 
     /**
      * Push set of URLs into queue. Depth and hops are computed based on parent.
+     *
      * @param parent Parent url
-     * @param list Set of new urls
+     * @param list   Set of new urls
      */
     @Override
     public void push(DownloadURL parent, Set<URI> list) {
-        for (URI url: list)
+        for (URI url : list)
             push(parent, url);
     }
 
@@ -205,5 +209,20 @@ public class BasicUrlContainer implements UrlContainer {
      */
     protected URI normalizeUrl(URI uri) {
         return UrlIndex.normalize(uri);
+    }
+
+    /**
+     * Return host form the url
+     *
+     * @param url URL
+     * @return host or empty string
+     */
+    protected String getHost(URI url) {
+        Matcher matcher = hostPattern.matcher(normalizeUrl(url).getHost());
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return "";
     }
 }

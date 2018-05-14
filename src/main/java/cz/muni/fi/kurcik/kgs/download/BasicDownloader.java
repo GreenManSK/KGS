@@ -8,6 +8,7 @@ import cz.muni.fi.kurcik.kgs.download.parser.ParserFactory;
 import cz.muni.fi.kurcik.kgs.download.parser.TikaParser;
 import cz.muni.fi.kurcik.kgs.util.AModule;
 import cz.muni.fi.kurcik.kgs.util.UrlIndex;
+import edu.stanford.nlp.util.ArraySet;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.tika.language.detect.LanguageDetector;
@@ -37,6 +38,10 @@ public class BasicDownloader extends AModule implements Downloader {
     protected final ParserFactory parserFactory;
 
     protected UrlContainer urlContainer;
+
+    protected int donwloadCount = 0;
+    protected int parserRejected = 0;
+    protected int languageRejected = 0;
 
     /**
      * Create new basic downloader
@@ -81,6 +86,10 @@ public class BasicDownloader extends AModule implements Downloader {
             while (!urlContainer.isEmpty()) {
                 parse(urlContainer.pop());
             }
+            getLogger().info("Downloaded URLs:" + donwloadCount);
+            getLogger().info("Rejected by parser:" + parserRejected);
+            getLogger().info("Rejected by language:" + languageRejected);
+            getLogger().info("Saved URLS: " + urlContainer.getParsedUrls().size());
         } finally {
             getLogger().info("Saving ID -> URL pairs");
             saveIdPairs();
@@ -122,6 +131,7 @@ public class BasicDownloader extends AModule implements Downloader {
         try {
             getLogger().info("Saving " + url + " to " + fileName);
             FileUtils.copyURLToFile(url.toURL(), originalFile.toFile(), 30000, 120000);
+            donwloadCount++;
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "Error while downloading " + url, e);
             return;
@@ -133,6 +143,7 @@ public class BasicDownloader extends AModule implements Downloader {
             if (!FileUtils.deleteQuietly(originalFile.toFile()))
                 getLogger().warning("Couldn't delete " + originalFile);
             urlContainer.setAsRejected(url);
+            parserRejected++;
             return;
         }
 
@@ -152,6 +163,7 @@ public class BasicDownloader extends AModule implements Downloader {
             if (!FileUtils.deleteQuietly(originalFile.toFile()))
                 getLogger().warning("Couldn't delete " + originalFile);
             urlContainer.setAsRejected(url);
+            languageRejected++;
             return;
         }
 
@@ -164,7 +176,7 @@ public class BasicDownloader extends AModule implements Downloader {
         }
 
         getLogger().info("Linking " + url);
-        Set<URI> links = parser.getLinks().stream().map(link -> url.resolve("/").resolve(link)).collect(Collectors.toSet());
+        Set<URI> links = parser.getLinks();
         urlContainer.push(durl, links);
         saveUrls(downloadDir.resolve(LINKS_FILES_DIR).resolve(urlContainer.getNextId() + LINKS_EXTENSION), links);
 

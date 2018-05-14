@@ -99,7 +99,12 @@ public class TikaParser implements Parser {
             parse(linkHandler);
             return linkHandler.getLinks().stream().map(link -> {
                 try {
-                    return url.resolve("/").resolve(link.getUri());
+                    URI linkUri = URI.create(link.getUri());
+                    if (linkUri.isAbsolute())
+                        return url.resolve(linkUri);
+                    else {
+                        return url.resolve((!linkUri.toString().startsWith("/") ? "/" : "") + linkUri);
+                    }
                 } catch (IllegalArgumentException e) {
                     return url;
                 }
@@ -108,7 +113,7 @@ public class TikaParser implements Parser {
                     return uri.resolve("/");
                 else
                     return uri;
-            }).collect(Collectors.toSet());
+            }).filter(URI::isAbsolute).collect(Collectors.toSet());
         } catch (ParserException e) {
         }
         return Collections.emptySet();
