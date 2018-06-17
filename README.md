@@ -1,6 +1,6 @@
 # Web document clustering and keyword generating using link mining
 The application implemented as a part of my bachelor's thesis.<br>
- Full text: <a href="#tood">@todo</a>
+ Full text: <a href="https://is.muni.cz/th/vv9kb/">https://is.muni.cz/th/vv9kb/</a>
 
 The application is implemented in Java 1.8 and uses maven. Jar file with dependencies can be found in folder executables.
 
